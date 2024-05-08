@@ -1,0 +1,8 @@
+.DS_Store
+.idea
+*.log
+tmp/
+packages.el
+init.el
+config.el
+keybinds.el
