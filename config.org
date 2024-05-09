@@ -523,7 +523,7 @@ wasn't installed correctly. Font issues are rarely Doom issues!
      doom-unicode-font (font-spec :family "FiraCode Nerd Font")
      doom-font (font-spec :family "JetBrainsMono Nerd Font" :size 15 :weight 'light)
      doom-big-font (font-spec :family "JetBrainsMono Nerd Font" :size 15 :weight 'light)
-     doom-variable-pitch-font (font-spec :family "SF Pro" :size 14 :weight 'light))
+     doom-variable-pitch-font (font-spec :family "Liberation Sans" :size 14 :weight 'light))
 (when (display-graphic-p)
   (require 'all-the-icons))
 #+end_src
