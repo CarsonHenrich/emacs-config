@@ -335,7 +335,7 @@ doom block.
        (java +lsp)                                  ; the poster child for carpal tunnel syndrome
        javascript                                   ; all(hope(abandon(ye(who(enter(here))))))
        ;;julia                                      ; a better, faster MATLAB
-       kotlin                                     ; a better, slicker Java(Script)
+       (kotlin +lsp)                                     ; a better, slicker Java(Script)
        (latex +latexmk +cdlatex +fold +lsp)         ; writing papers in Emacs has never been so fun
        ;;lean                                       ; for folks with too much to prove
        ;;ledger                                     ; be audit you can be
@@ -392,8 +392,8 @@ doom block.
 This is where packages not included in modules are placed to install them.
 #+begin_src emacs-lisp :tangle packages.el
 (package! engrave-faces)
-(package! speed-type)
 (package! leetcode)
+(package! ox-hugo)
 (package! org-present)
 (package! synosaurus)         ; thesuarus that doesn't get installed with lookup for some reason
 (package! djvu)
@@ -404,8 +404,11 @@ This is where packages not included in modules are placed to install them.
 (package! ellama)
 (package! spray
   :recipe (:host github :repo "emacsmirror/spray" :files ("*.el")))
+(package! ob-kotlin)
 (package! copilot
   :recipe (:host github :repo "copilot-emacs/copilot.el" :files ("*.el")))
+(package! whisper
+  :recipe (:host github :repo "natrys/whisper.el" :files ("*.el")))
 #+end_src
 * General Configuration
   #+begin_src emacs-lisp :tangle config.el
@@ -416,6 +419,7 @@ This is where packages not included in modules are placed to install them.
         initial-buffer-choice (lambda () (org-roam-dailies-goto-today "p") (current-buffer)))
 (display-time-mode 1)
 (auto-revert-mode 1)
+(toggle-text-mode-auto-fill)
 (require 'org-roam)
 (require 'org-roam-dailies)
 (require 'spray)
@@ -468,29 +472,12 @@ available. You can either set `doom-theme' or manually load a theme with the
 (package! catppuccin-theme)
 #+end_src
 
-#+RESULTS:
-
 #+begin_src emacs-lisp :tangle config.el
-(setq-default doom-theme 'catppuccin)
-#+end_src
-#+begin_src emacs-lisp :tangle config.el
-  (if (daemonp)
-    (add-hook 'after-make-frame-functions
-              (defun my/theme-init-daemon (frame)
-                (with-selected-frame frame
-                  (load-theme 'catppuccin))
-                ;; Run this hook only once.
-                (remove-hook 'after-make-frame-functions
-                             #'my/theme-init-daemon)
-                (fmakunbound 'my/theme-init-daemon)))
-   (load-theme 'catppuccin)
-  )
-
+(setq doom-theme 'catppuccin)
 
 ;; Configure fill width
 (setq visual-fill-column-center-text t)
-(setq visual-fill-column-width 85)
-
+(setq visual-fill-column-width 130)
 #+end_src
 
 #+RESULTS:
@@ -519,11 +506,44 @@ up, `M-x eval-region' to execute elisp code, and 'M-x doom/reload-font' to
 refresh your font settings. If Emacs still can't find your font, it likely
 wasn't installed correctly. Font issues are rarely Doom issues!
 #+begin_src emacs-lisp :tangle config.el
- (setq
-     doom-unicode-font (font-spec :family "FiraCode Nerd Font")
-     doom-font (font-spec :family "JetBrainsMono Nerd Font" :size 15 :weight 'light)
-     doom-big-font (font-spec :family "JetBrainsMono Nerd Font" :size 15 :weight 'light)
-     doom-variable-pitch-font (font-spec :family "Liberation Sans" :size 14 :weight 'light))
+;; Set reusable font name variables
+(defvar my/fixed-width-font "JetBrainsMono Nerd Font"
+  "The font to use for monospaced (fixed width) text.")
+
+(defvar my/variable-width-font "Liberation Sans"
+  "The font to use for variable-pitch (document) text.")
+
+(setq
+    doom-unicode-font (font-spec :family "FiraCode Nerd Font")
+    doom-font (font-spec :family my/fixed-width-font :size 15 :weight 'light)
+    doom-big-font (font-spec :family my/fixed-width-font :size 18 :weight 'light)
+    doom-variable-pitch-font (font-spec :family my/variable-width-font :size 14 :weight 'light))
+
+
+;; Load org-faces to make sure we can set appropriate faces
+(require 'org-faces)
+
+;; Hide emphasis markers on formatted text
+(setq org-hide-emphasis-markers t
+      cursor-hidden 'nil)
+
+
+;; Hide emphasis markers on formatted text
+(setq org-hide-emphasis-markers t)
+
+
+;; Make the document title a bit bigger
+
+;; Make sure certain org faces use the fixed-pitch face when variable-pitch-mode is on
+(set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
+(set-face-attribute 'org-table nil :inherit 'fixed-pitch)
+(set-face-attribute 'org-formula nil :inherit 'fixed-pitch)
+(set-face-attribute 'org-code nil :inherit '(shadow fixed-pitch))
+(set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
+(set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
+(set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
+(set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch)
+
 (when (display-graphic-p)
   (require 'all-the-icons))
 #+end_src
@@ -554,7 +574,7 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 
 * Keybindings
 #+begin_src emacs-lisp :tangle config.el
-(load-file "~/.config/doom/keybinds.el")
+(load! "~/.config/doom/keybinds.el")
 #+end_src
 ** Navigation
 *** Windows
@@ -562,8 +582,6 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 (map! :leader :prefix ("w" . "windows")
         :desc "Delete other windows" :n "o" #'delete-other-windows)
 #+end_src
-
-#+RESULTS:
 
 *** Workspaces
 #+begin_src emacs-lisp :tangle keybinds.el :lexical t
@@ -657,8 +675,6 @@ numbers are disabled. For relative line numbers, set this to `relative'.
            :desc "Switch buffer"              "b"   #'switch-to-buffer)))
 #+end_src
 
-#+RESULTS:
-
 *** Files
 #+begin_src emacs-lisp :tangle keybinds.el :lexical t
       ;;; <leader> f --- file
@@ -684,9 +700,6 @@ numbers are disabled. For relative line numbers, set this to `relative'.
     :desc "Yank file path"              "y"   #'+default/yank-buffer-path
     :desc "Yank file path from project" "Y"   #'+default/yank-buffer-path-relative-to-project))
 #+end_src
-
-#+RESULTS:
-: +default/yank-buffer-path-relative-to-project
 
 *** Projects
 #+begin_src emacs-lisp :tangle keybinds.el :lexical t
@@ -724,8 +737,6 @@ numbers are disabled. For relative line numbers, set this to `relative'.
                        (modulep! :completion helm)))
         :desc "List project tasks"          "z" #'+taskrunner/project-tasks)))
 #+end_src
-
-#+RESULTS:
 
 #+begin_src emacs-lisp :tangle keybinds.el :lexical t
 (when (modulep! :editor evil +everywhere)
@@ -819,13 +830,9 @@ numbers are disabled. For relative line numbers, set this to `relative'.
                 :n "q"    #'kill-current-buffer))
 #+end_src
 
-#+RESULTS:
-
 
 #+begin_src emacs-lisp :tangle keybinds.el :lexical t
 #+end_src
-
-#+RESULTS:
 
 ** Completion
 #+begin_src emacs-lisp :tangle keybinds.el :lexical t
@@ -913,8 +920,6 @@ numbers are disabled. For relative line numbers, set this to `relative'.
             [C-return] #'helm-grep-run-other-window-action)))
 #+end_src
 
-#+RESULTS:
-
 ** UI
 #+begin_src emacs-lisp :tangle keybinds.el :lexical t
 (map!
@@ -987,24 +992,39 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 ** Editor
 #+begin_src emacs-lisp :tangle keybinds.el :lexical t
 (map!
-    (:when (modulep! :editor format)
-        :n "gQ" #'+format:region)
+ (:when (modulep! :editor format)
+   :n "gQ" #'+format:region)
 
-    (:n "zC" #'+fold/close-all)
-    (:n "zO" #'+fold/open-all)
-    (:n "zr" #'vimish-fold-unfold-all)
-    (:n "zm" #'vimish-fold-refold-all)
-    (:n "zA" #'vimish-fold-toggle-all)
-    (:n "gy" #'yank-from-kill-ring)
+ (:n "zC" #'+fold/close-all)
+ (:n "zO" #'+fold/open-all)
+ (:n "zr" #'vimish-fold-unfold-all)
+ (:n "zm" #'vimish-fold-refold-all)
+ (:n "zA" #'vimish-fold-toggle-all)
+ (:n "gy" #'yank-from-kill-ring)
 
-    (:when (modulep! :editor rotate-text)
-        :n "]r"  #'rotate-text
-        :n "[r"  #'rotate-text-backward)
+ (:when (modulep! :editor rotate-text)
+   :n "]r"  #'rotate-text
+   :n "[r"  #'rotate-text-backward)
 
-    (:when (modulep! :editor snippets)
-        ;; auto-yasnippet
-        :i  [C-tab] #'aya-expand
-        :nv [C-tab] #'aya-create))
+ (:when (modulep! :editor snippets)
+   ;; auto-yasnippet
+   :i  [C-tab] #'aya-expand
+   :nv [C-tab] #'aya-create)
+ (:map code-review-mode-map
+       (:n "]]" #'code-review-comment-jump-next)
+       (:n "[[" #'code-review-comment-jump-previous)
+       (:localleader
+              (:n "m" #'code-review-transient-api)
+              (:n "c" #'code-review-comment-add-or-edit)
+              (:n "t" #'code-review-github-repo)
+              (:n "s" #'code-review-comment-code-suggestion)
+        (:prefix ("S". "Set")
+                (:n "t" #'code-review-set-title)
+                (:n "d" #'code-review-set-description)
+                (:n "l" #'code-review-set-label)
+                (:n "a" #'code-review-set-assignee)
+                (:n "A" #'code-review-set-yourself-assignee)
+                (:n "f" #'code-review-set-feedback)))))
 #+end_src
 *** Multi-Cursors
 #+begin_src emacs-lisp :tangle keybinds.el :lexical t
@@ -1044,8 +1064,6 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 
 #+end_src
 
-#+RESULTS:
-
 ** Tools
 #+begin_src emacs-lisp :tangle keybinds.el :lexical t
 ;;; <leader> l --- live share/collab
@@ -1054,194 +1072,199 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 ;;; place! Also not sure if we're allowed to say "live share" since that's
 ;;; a blatant ripoff of VS Code's name for this feature
 (map!
-    (:after printing (:desc "Print" "s-p"   #'pr-interface))
-    (:when (modulep! :tools collab) (:prefix ("l" . "live share/collab")
-                                     :desc "Switch to a shared buffer"      "b"   #'crdt-switch-to-buffer
-                                     :desc "Connect to a session"           "c"   #'crdt-connect
-                                     :desc "Disconnect from session"        "d"   #'crdt-disconnect
-                                     :desc "Toggle following user's cursor" "f"   #'crdt-follow-user
-                                     :desc "Stop following user if any"     "F"   #'crdt-stop-follow
-                                     :desc "Goto another user's cursor"     "g"   #'crdt-goto-user
-                                     :desc "List shared buffers"            "i"   #'crdt-list-buffers
-                                     :desc "Kick a user (host only)"        "k"   #'crdt-kill-user
-                                     :desc "List sessions"                  "l"   #'crdt-list-sessions
-                                     :desc "Share current buffer"           "s"   #'crdt-share-buffer
-                                     :desc "Stop sharing current buffer"    "S"   #'crdt-stop-share-buffer
-                                     :desc "List connected users"           "u"   #'crdt-list-users
-                                     :desc "Stop a session (host only)"     "x"   #'crdt-stop-session
-                                     :desc "Copy URL of current session"    "y"   #'crdt-copy-url
-                                     :desc "Goto next user's cursor"        "]"   #'crdt-goto-next-user
-                                     :desc "Goto previous user's cursor"    "["   #'crdt-goto-prev-user))
+ (:after printing (:desc "Print" "s-p"   #'pr-interface))
+ (:when (modulep! :tools collab) (:prefix ("l" . "live share/collab")
+                                  :desc "Switch to a shared buffer"      "b"   #'crdt-switch-to-buffer
+                                  :desc "Connect to a session"           "c"   #'crdt-connect
+                                  :desc "Disconnect from session"        "d"   #'crdt-disconnect
+                                  :desc "Toggle following user's cursor" "f"   #'crdt-follow-user
+                                  :desc "Stop following user if any"     "F"   #'crdt-stop-follow
+                                  :desc "Goto another user's cursor"     "g"   #'crdt-goto-user
+                                  :desc "List shared buffers"            "i"   #'crdt-list-buffers
+                                  :desc "Kick a user (host only)"        "k"   #'crdt-kill-user
+                                  :desc "List sessions"                  "l"   #'crdt-list-sessions
+                                  :desc "Share current buffer"           "s"   #'crdt-share-buffer
+                                  :desc "Stop sharing current buffer"    "S"   #'crdt-stop-share-buffer
+                                  :desc "List connected users"           "u"   #'crdt-list-users
+                                  :desc "Stop a session (host only)"     "x"   #'crdt-stop-session
+                                  :desc "Copy URL of current session"    "y"   #'crdt-copy-url
+                                  :desc "Goto next user's cursor"        "]"   #'crdt-goto-next-user
+                                  :desc "Goto previous user's cursor"    "["   #'crdt-goto-prev-user))
 
     ;;; <leader> o --- open
-    (:leader :prefix ("o" . "open")
-        :desc "Default browser"    "b"  #'browse-url-of-file
-        :desc "Start debugger"     "d"  #'+debugger/start
-        :desc "New frame"          "w"  #'make-frame
-        :desc "GPT"                "g"  #'gptel
-        :desc "Select frame"       "W"  #'select-frame-by-name
-        :desc "REPL"               "r"  #'+eval/open-repl-other-window
-        :desc "REPL (same window)" "R"  #'+eval/open-repl-same-window
-        :desc "Dired"              "-"  #'dired-jump
-        :desc "Calc"              "c"  #'calc
-        :desc "Org agenda"       "A"  #'org-agenda
-        (:prefix ("a" . "org agenda2000")
-            :desc "Agenda"         "a"  #'org-agenda
-            :desc "Todo list"      "t"  #'org-todo-list
-            :desc "Tags search"    "m"  #'org-tags-view
-            :desc "View search"    "v"  #'org-search-view)
-        (:when (modulep! :tools pass)
-            :desc "Pass"           "k" #'pass)
-        (:when (modulep! :tools pass)
-            :desc "Pass"           "k" #'pass)
-        (:when (modulep! :ui neotree)
-            :desc "Project sidebar"              "p" #'+neotree/open
-            :desc "Find file in project sidebar" "P" #'+neotree/find-this-file)
-        (:when (modulep! :ui treemacs)
-            :desc "Project sidebar" "p" #'+treemacs/toggle
-            :desc "Find file in project sidebar" "P" #'treemacs-find-file)
-        (:when (modulep! :term shell)
-            :desc "Toggle shell popup"    "t" #'+shell/toggle
-            :desc "Open shell here"       "T" #'+shell/here)
-        (:when (modulep! :term term)
-            :desc "Toggle terminal popup" "t" #'+term/toggle
-            :desc "Open terminal here"    "T" #'+term/here)
-        (:when (modulep! :term vterm)
-            :desc "Toggle vterm popup"    "t" #'+vterm/toggle
-            :desc "Open vterm here"       "T" #'+vterm/here)
-        (:when (modulep! :term eshell)
-            :desc "Toggle eshell popup"   "e" #'+eshell/toggle
-            :desc "Open eshell here"      "E" #'+eshell/here)
-        (:when (modulep! :os macos)
-            :desc "Reveal in Finder"           "o" #'+macos/reveal-in-finder
-            :desc "Reveal project in Finder"   "O" #'+macos/reveal-project-in-finder)
-        (:when (modulep! :tools docker)
-            :desc "Docker" "D" #'docker)
-        (:when (modulep! :app calendar)
-            :desc "Calendar" "C" #'=calendar)
-        (:after speed-type
-            :desc "Speed Type" "s" #'speed-type-text)
-        (:when (modulep! :app irc)
-            :desc "IRC" "i" #'=irc)
-        (:when (modulep! :app rss)
-            :desc "RSS" "f" #'=rss)
-        (:when (modulep! :email mu4e)
-            :desc "Mu4e" "m" #'=mu4e
-            :desc "Mu4e Compose" "M" #'+mu4e/compose)
-        (:when (modulep! :email notmuch)
-            :desc "notmuch" "m" #'=notmuch)
-        (:when (modulep! :email wanderlust)
-            :desc "wanderlust" "m" #'=wanderlust))
+ (:leader :prefix ("o" . "open")
+  :desc "Default browser"    "b"  #'browse-url-of-file
+  :desc "Start debugger"     "d"  #'+debugger/start
+  :desc "New frame"          "w"  #'make-frame
+  :desc "GPT"                "g"  #'gptel
+  :desc "Select frame"       "W"  #'select-frame-by-name
+  :desc "REPL"               "r"  #'+eval/open-repl-other-window
+  :desc "REPL (same window)" "R"  #'+eval/open-repl-same-window
+  :desc "Dired"              "-"  #'dired-jump
+  :desc "Calc"              "c"  #'calc
+  :desc "Org agenda"       "A"  #'org-agenda
+  (:prefix ("a" . "org agenda2000")
+   :desc "Agenda"         "a"  #'org-agenda
+   :desc "Todo list"      "t"  #'org-todo-list
+   :desc "Tags search"    "m"  #'org-tags-view
+   :desc "View search"    "v"  #'org-search-view)
+  (:when (modulep! :tools pass)
+    :desc "Pass"           "k" #'pass)
+  (:when (modulep! :tools pass)
+    :desc "Pass"           "k" #'pass)
+  (:when (modulep! :ui neotree)
+    :desc "Project sidebar"              "p" #'+neotree/open
+    :desc "Find file in project sidebar" "P" #'+neotree/find-this-file)
+  (:when (modulep! :ui treemacs)
+    :desc "Project sidebar" "p" #'+treemacs/toggle
+    :desc "Find file in project sidebar" "P" #'treemacs-find-file)
+  (:when (modulep! :term shell)
+    :desc "Toggle shell popup"    "t" #'+shell/toggle
+    :desc "Open shell here"       "T" #'+shell/here)
+  (:when (modulep! :term term)
+    :desc "Toggle terminal popup" "t" #'+term/toggle
+    :desc "Open terminal here"    "T" #'+term/here)
+  (:when (modulep! :term vterm)
+    :desc "Toggle vterm popup"    "t" #'+vterm/toggle
+    :desc "Open vterm here"       "T" #'+vterm/here)
+  (:when (modulep! :term eshell)
+    :desc "Toggle eshell popup"   "e" #'+eshell/toggle
+    :desc "Open eshell here"      "E" #'+eshell/here)
+  (:when (modulep! :os macos)
+    :desc "Reveal in Finder"           "o" #'+macos/reveal-in-finder
+    :desc "Reveal project in Finder"   "O" #'+macos/reveal-project-in-finder)
+  (:when (modulep! :tools docker)
+    :desc "Docker" "D" #'docker)
+  (:when (modulep! :app calendar)
+    :desc "Calendar" "C" #'=calendar)
+  (:when (modulep! :app irc)
+    :desc "IRC" "i" #'=irc)
+  (:when (modulep! :app rss)
+    :desc "RSS" "f" #'=rss)
+  (:when (modulep! :email mu4e)
+    :desc "Mu4e" "m" #'=mu4e
+    :desc "Mu4e Compose" "M" #'+mu4e/compose)
+  (:when (modulep! :email notmuch)
+    :desc "notmuch" "m" #'=notmuch)
+  (:after spray
+   :desc "Spray" "s" #'spray-mode)
+  (:when (modulep! :email wanderlust)
+    :desc "wanderlust" "m" #'=wanderlust))
 
-    (:leader :prefix ("e" . "ellama")
-            :desc "Chat" "e" #'ellama-chat
-            :desc "Change" "C" #'ellama-change
-            :desc "Provider Selection" "p" #'ellama-provider-select
-            :desc "Define Word" "d" #'ellama-define-word
-            :desc "Send Region/Buffer to chat" :nv "E" #'ellama-ask-selection
-            :desc "Ask About Region/Buffer"   :nv "a" #'ellama-ask-about
-            :desc "Summarize Region/Buffer"   :nv "S" #'ellama-summarize
-            :desc "Complete" "<tab>" #'ellama-complete
-            (:prefix ("s" . "session")
-                :desc "Switch" "s" #'ellama-session-switch
-                :desc "Load" "l" #'ellama-load-session
-                :desc "Remove" "R" #'ellama-session-remove
-                :desc "Rename" "r" #'ellama-session-rename)
-            (:prefix ("i" . "improve")
-                :desc "Grammar" "g" #'ellama-improve-grammar
-                :desc "Wording" "w" #'ellama-improve-wording
-                :desc "Conciseness" "c" #'ellama-improve-conciseness)
-            (:prefix ("c" . "code")
-                :desc "Complete" "<tab>" #'ellama-code-complete
-                :desc "Improve" "i" #'ellama-code-improve
-                :desc "Review" "r" #'ellama-code-review
-                :desc "Edit" "e" #'ellama-code-edit
-                :desc "Add" "a" #'ellama-code-add))
-
+ (:leader :prefix ("e" . "AI")
+          (:after copilot
+           :desc "Complete" "<tab>" #'copilot-mode)
+          (:when (require 'ellama)
+           :desc "Chat" "e" #'ellama-chat
+           :desc "Change" "C" #'ellama-change
+           :desc "Provider Selection" "p" #'ellama-provider-select
+           :desc "Define Word" "d" #'ellama-define-word
+           :desc "Send Region/Buffer to chat" :nv "E" #'ellama-ask-selection
+           :desc "Ask About Region/Buffer"   :nv "a" #'ellama-ask-about
+           :desc "Summarize Region/Buffer"   :nv "S" #'ellama-summarize
+           (:prefix ("s" . "session")
+            :desc "Switch" "s" #'ellama-session-switch
+            :desc "Load" "l" #'ellama-load-session
+            :desc "Remove" "R" #'ellama-session-remove
+            :desc "Rename" "r" #'ellama-session-rename)
+           (:prefix ("i" . "improve")
+            :desc "Grammar" "g" #'ellama-improve-grammar
+            :desc "Wording" "w" #'ellama-improve-wording
+            :desc "Conciseness" "c" #'ellama-improve-conciseness)
+           (:prefix ("c" . "code")
+            :desc "Complete" "<tab>" #'ellama-code-complete
+            :desc "Improve" "i" #'ellama-code-improve
+            :desc "Review" "r" #'ellama-code-review
+            :desc "Edit" "e" #'ellama-code-edit
+            :desc "Add" "a" #'ellama-code-add))
+          (:when (require 'whisper)
+           :desc "Whisper" "w" #'whisper-run))
 
     ;;; <leader> r --- remote
-    (:when (modulep! :tools upload) (:leader :prefix ("r" . "remote")
-                                     :desc "Browse remote"              "b" #'ssh-deploy-browse-remote-base-handler
-                                     :desc "Browse relative"            "B" #'ssh-deploy-browse-remote-handler
-                                     :desc "Download remote"            "d" #'ssh-deploy-download-handler
-                                     :desc "Delete local & remote"      "D" #'ssh-deploy-delete-handler
-                                     :desc "Eshell base terminal"       "e" #'ssh-deploy-remote-terminal-eshell-base-handler
-                                     :desc "Eshell relative terminal"   "E" #'ssh-deploy-remote-terminal-eshell-handler
-                                     :desc "Move/rename local & remote" "m" #'ssh-deploy-rename-handler
-                                     :desc "Open this file on remote"   "o" #'ssh-deploy-open-remote-file-handler
-                                     :desc "Run deploy script"          "s" #'ssh-deploy-run-deploy-script-handler
-                                     :desc "Upload local"               "u" #'ssh-deploy-upload-handler
-                                     :desc "Upload local (force)"       "U" #'ssh-deploy-upload-handler-forced
-                                     :desc "Diff local & remote"        "x" #'ssh-deploy-diff-handler
-                                     :desc "Browse remote files"        "." #'ssh-deploy-browse-remote-handler
-                                     :desc "Detect remote changes"      ">" #'ssh-deploy-remote-changes-handler))
+ (:when (modulep! :tools upload) (:leader :prefix ("r" . "remote")
+                                  :desc "Browse remote"              "b" #'ssh-deploy-browse-remote-base-handler
+                                  :desc "Browse relative"            "B" #'ssh-deploy-browse-remote-handler
+                                  :desc "Download remote"            "d" #'ssh-deploy-download-handler
+                                  :desc "Delete local & remote"      "D" #'ssh-deploy-delete-handler
+                                  :desc "Eshell base terminal"       "e" #'ssh-deploy-remote-terminal-eshell-base-handler
+                                  :desc "Eshell relative terminal"   "E" #'ssh-deploy-remote-terminal-eshell-handler
+                                  :desc "Move/rename local & remote" "m" #'ssh-deploy-rename-handler
+                                  :desc "Open this file on remote"   "o" #'ssh-deploy-open-remote-file-handler
+                                  :desc "Run deploy script"          "s" #'ssh-deploy-run-deploy-script-handler
+                                  :desc "Upload local"               "u" #'ssh-deploy-upload-handler
+                                  :desc "Upload local (force)"       "U" #'ssh-deploy-upload-handler-forced
+                                  :desc "Diff local & remote"        "x" #'ssh-deploy-diff-handler
+                                  :desc "Browse remote files"        "." #'ssh-deploy-browse-remote-handler
+                                  :desc "Detect remote changes"      ">" #'ssh-deploy-remote-changes-handler))
+
+
 
     ;;; <leader> s --- search
-    (:leader :prefix ("s" . "search")
-        :desc "Search current directory"     "d" #'+default/search-cwd
-        :desc "Search other directory"       "D" #'+default/search-other-cwd
-        :desc "Search .emacs.d"              "e" #'+default/search-emacsd
-        :desc "Locate file"                  "f" #'locate
-        :desc "Jump to symbol"               "i" #'imenu
-        :desc "Jump to visible link"         "l" #'link-hint-open-link
-        :desc "Jump to link"                 "L" #'ffap-menu
-        :desc "Jump list"                    "j" #'evil-show-jumps
-        :desc "Jump to bookmark"             "m" #'bookmark-jump
-        :desc "Look up online"               "o" #'+lookup/online
-        :desc "Look up online (w/ prompt)"   "O" #'+lookup/online-select
-        :desc "Look up in local docsets"     "k" #'+lookup/in-docsets
-        :desc "Look up in all docsets"       "K" #'+lookup/in-all-docsets
-        :desc "Search project"               "p" #'+default/search-project
-        :desc "Search other project"         "P" #'+default/search-other-project
-        :desc "Jump to mark"                 "r" #'evil-show-marks
-        :desc "Search buffer"                "s" #'+default/search-buffer
-        :desc "Dictionary"                   "t" #'+lookup/dictionary-definition
-        :desc "Thesaurus"                    "T" #'+lookup/synonyms
-        :desc "Search all open buffers"      "B"
-        (cond ((modulep! :completion vertico)   (cmd!! #'consult-line-multi 'all-buffers))
-              ((modulep! :completion ivy)       #'swiper-all)
-              ((modulep! :completion helm)      #'swiper-all))
-        :desc "Search buffer"                "b"
-        (cond ((modulep! :completion vertico)   #'+default/search-buffer)
-              ((modulep! :completion ivy)       #'swiper)
-              ((modulep! :completion helm)      #'swiper))
-        :desc "Jump to symbol in open buffers" "I"
-       (cond ((modulep! :completion vertico)   #'consult-imenu-multi)
-             ((modulep! :completion helm)      #'helm-imenu-in-all-buffers))
-       :desc "Search buffer for thing at point" "S"
-       (cond ((modulep! :completion vertico)   #'+vertico/search-symbol-at-point)
-             ((modulep! :completion ivy)       #'swiper-isearch-thing-at-point)
-             ((modulep! :completion helm)      #'swiper-isearch-thing-at-point))
-       (:when (fboundp 'vundo)
-           :desc "Undo history"               "u" #'vundo))
+ (:leader :prefix ("s" . "search")
+  :desc "Search current directory"     "d" #'+default/search-cwd
+  :desc "Search other directory"       "D" #'+default/search-other-cwd
+  :desc "Search .emacs.d"              "e" #'+default/search-emacsd
+  :desc "Locate file"                  "f" #'locate
+  :desc "Jump to symbol"               "i" #'imenu
+  :desc "Jump to visible link"         "l" #'link-hint-open-link
+  :desc "Jump to link"                 "L" #'ffap-menu
+  :desc "Jump list"                    "j" #'evil-show-jumps
+  :desc "Jump to bookmark"             "m" #'bookmark-jump
+  :desc "Look up online"               "o" #'+lookup/online
+  :desc "Look up online (w/ prompt)"   "O" #'+lookup/online-select
+  :desc "Look up in local docsets"     "k" #'+lookup/in-docsets
+  :desc "Look up in all docsets"       "K" #'+lookup/in-all-docsets
+  :desc "Search project"               "p" #'+default/search-project
+  :desc "Search other project"         "P" #'+default/search-other-project
+  :desc "Jump to mark"                 "r" #'evil-show-marks
+  :desc "Search buffer"                "s" #'+default/search-buffer
+  :desc "Dictionary"                   "t" #'+lookup/dictionary-definition
+  :desc "Thesaurus"                    "T" #'+lookup/synonyms
+  :desc "Search all open buffers"      "B"
+  (cond ((modulep! :completion vertico)   (cmd!! #'consult-line-multi 'all-buffers))
+        ((modulep! :completion ivy)       #'swiper-all)
+        ((modulep! :completion helm)      #'swiper-all))
+  :desc "Search buffer"                "b"
+  (cond ((modulep! :completion vertico)   #'+default/search-buffer)
+        ((modulep! :completion ivy)       #'swiper)
+        ((modulep! :completion helm)      #'swiper))
+  :desc "Jump to symbol in open buffers" "I"
+  (cond ((modulep! :completion vertico)   #'consult-imenu-multi)
+        ((modulep! :completion helm)      #'helm-imenu-in-all-buffers))
+  :desc "Search buffer for thing at point" "S"
+  (cond ((modulep! :completion vertico)   #'+vertico/search-symbol-at-point)
+        ((modulep! :completion ivy)       #'swiper-isearch-thing-at-point)
+        ((modulep! :completion helm)      #'swiper-isearch-thing-at-point))
+  (:when (fboundp 'vundo)
+    :desc "Undo history"               "u" #'vundo))
 
 
-    (:when (modulep! :lang org +noter)
-        (:map org-mode-map
-                :localleader
-                :desc "Noter"                       "n" #'org-noter
-                :desc "Import Skeleton"             "S" #'org-noter-create-skeleton
-                :desc "Goto Notes page"             ";" #'org-noter-sync-current-note
-                :desc "Goto next notes page"        "j" #'org-noter-sync-prev-note
-                :desc "Goto prev notes page"        "k" #'org-noter-sync-next-note
-                :desc "Kill Noter"                  "K" #'org-noter-kill-session))
+ (:when (modulep! :lang org +noter)
+   (:map org-mode-map
+    :localleader
+    :desc "Noter"                       "n" #'org-noter
+    :desc "Import Skeleton"             "S" #'org-noter-create-skeleton
+    :desc "Goto Notes page"             ";" #'org-noter-sync-current-note
+    :desc "Goto next notes page"        "j" #'org-noter-sync-prev-note
+    :desc "Goto prev notes page"        "k" #'org-noter-sync-next-note
+    :desc "Kill Noter"                  "K" #'org-noter-kill-session))
 
-    (:when (modulep! :tools pdf)
-       (:map pdf-view-mode-map
+ (:when (modulep! :tools pdf)
+   (:map pdf-view-mode-map
+         (:localleader
+          :desc "Center"                    "c" #'pdf-view-center-in-window
+          :desc "Rotate"                    "r" #'pdf-view-rotate
+          :desc "Recolor"                   "R" #'pdf-view-themed-minor-mode)
+         (:when (modulep! :lang org +noter)
            (:localleader
-                   :desc "Center"                    "c" #'pdf-view-center-in-window
-                   :desc "Rotate"                    "r" #'pdf-view-rotate
-                   :desc "Recolor"                   "R" #'pdf-view-themed-minor-mode)
-           (:when (modulep! :lang org +noter)
-               (:localleader
-                :desc "Noter"                       "n" #'org-noter
-                :desc "Insert Note"                 "i" #'org-noter-insert-note
-                :desc "Insert Skeleton"             "S" #'org-noter-create-skeleton
-                :desc "Insert Precise Note"         "I" #'org-noter-insert-precise-note
-                :desc "Kill Noter"                  "K" #'org-noter-kill-session
-                :desc "Goto pages Notes"            ";" #'org-noter-sync-current-page-or-chapter
-                :desc "Goto next page with notes"   "j" #'org-noter-sync-next-page-or-chapter
-                :desc "Goto prev page with notes"   "k" #'org-noter-sync-prev-page-or-chapter)))))
+            :desc "Noter"                       "n" #'org-noter
+            :desc "Insert Note"                 "i" #'org-noter-insert-note
+            :desc "Insert Skeleton"             "S" #'org-noter-create-skeleton
+            :desc "Insert Precise Note"         "I" #'org-noter-insert-precise-note
+            :desc "Kill Noter"                  "K" #'org-noter-kill-session
+            :desc "Goto pages Notes"            ";" #'org-noter-sync-current-page-or-chapter
+            :desc "Goto next page with notes"   "j" #'org-noter-sync-next-page-or-chapter
+            :desc "Goto prev page with notes"   "k" #'org-noter-sync-prev-page-or-chapter)))))
 #+end_src
 
 #+RESULTS:
@@ -1302,9 +1325,6 @@ numbers are disabled. For relative line numbers, set this to `relative'.
         :desc "Restart Emacs"                "R" #'doom/restart))
 #+end_src
 
-#+RESULTS:
-: doom/restart
-
 ** Programming
 *** Code
 #+begin_src emacs-lisp :tangle keybinds.el :lexical t
@@ -1360,8 +1380,6 @@ numbers are disabled. For relative line numbers, set this to `relative'.
                 (:when (modulep! :completion vertico)
                     :desc "Jump to symbol in current workspace" "j"   #'consult-eglot-symbols))))
 #+end_src
-
-#+RESULTS:
 
 *** Git
 #+begin_src emacs-lisp :tangle keybinds.el :lexical t
@@ -1528,9 +1546,6 @@ numbers are disabled. For relative line numbers, set this to `relative'.
       :desc "Find directory"            "-" #'org-roam-dailies-find-directory)))))
 #+end_src
 
-#+RESULTS:
-: org-roam-dailies-find-directory
-
 ** No Idea
 #+begin_src emacs-lisp :tangle keybinds.el :lexical t
 (after! which-key
@@ -1563,15 +1578,79 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 (setq vterm-shell "/etc/profiles/per-user/carsonhenrich/bin/fish")
 #+end_src
 
-** Completion
+** AI
+*** Whisper
 #+begin_src emacs-lisp :tangle yes
-(setq lsp-headerline-breadcrumb-enable 't)
-(set-lookup-handlers! 'lsp-ui-doc-mode :documentation #'lsp-ui-doc-glance)
-(after! corfu
-   (setq corfu-preselect 'valid)
-   (add-hook 'completion-at-point-functions #'cape-file)
-   (add-hook! org-mode (add-hook 'completion-at-point-functions #'cape-dict 0 't)))
+(after! whisper
+
+  (defun rk/get-ffmpeg-device ()
+    "Gets the list of devices available to ffmpeg.
+The output of the ffmpeg command is pretty messy, e.g.
+  [AVFoundation indev @ 0x7f867f004580] AVFoundation video devices:
+  [AVFoundation indev @ 0x7f867f004580] [0] FaceTime HD Camera (Built-in)
+  [AVFoundation indev @ 0x7f867f004580] AVFoundation audio devices:
+  [AVFoundation indev @ 0x7f867f004580] [0] Cam Link 4K
+  [AVFoundation indev @ 0x7f867f004580] [1] MacBook Pro Microphone
+so we need to parse it to get the list of devices.
+The return value contains two lists, one for video devices and one for audio devices.
+Each list contains a list of cons cells, where the car is the device number and the cdr is the device name."
+    (unless (string-equal system-type "darwin")
+      (error "This function is currently only supported on macOS"))
+
+    (let ((lines (string-split (shell-command-to-string "ffmpeg -list_devices true -f avfoundation -i dummy || true") "\n")))
+      (cl-loop with at-video-devices = nil
+               with at-audio-devices = nil
+               with video-devices = nil
+               with audio-devices = nil
+               for line in lines
+               when (string-match "AVFoundation video devices:" line)
+               do (setq at-video-devices t
+                        at-audio-devices nil)
+               when (string-match "AVFoundation audio devices:" line)
+               do (setq at-audio-devices t
+                        at-video-devices nil)
+               when (and at-video-devices
+                         (string-match "\\[\\([0-9]+\\)\\] \\(.+\\)" line))
+               do (push (cons (string-to-number (match-string 1 line)) (match-string 2 line)) video-devices)
+               when (and at-audio-devices
+                         (string-match "\\[\\([0-9]+\\)\\] \\(.+\\)" line))
+               do (push (cons (string-to-number (match-string 1 line)) (match-string 2 line)) audio-devices)
+               finally return (list (nreverse video-devices) (nreverse audio-devices)))))
+
+ (defun rk/find-device-matching (string type)
+   "Get the devices from `rk/get-ffmpeg-device' and look for a device
+matching `STRING'. `TYPE' can be :video or :audio."
+   (let* ((devices (rk/get-ffmpeg-device))
+          (device-list (if (eq type :video)
+                           (car devices)
+                         (cadr devices))))
+     (cl-loop for device in device-list
+              when (string-match-p string (cdr device))
+              return (car device))))
+
+ (defcustom rk/default-audio-device nil
+   "The default audio device to use for whisper.el and outher audio processes."
+   :type 'string)
+
+ (defun rk/select-default-audio-device (&optional device-name)
+   "Interactively select an audio device to use for whisper.el and other audio processes.
+If `DEVICE-NAME' is provided, it will be used instead of prompting the user."
+   (interactive)
+   (let* ((audio-devices (cadr (rk/get-ffmpeg-device)))
+          (indexes (mapcar #'car audio-devices))
+          (names (mapcar #'cdr audio-devices))
+          (name (or device-name (completing-read "Select audio device: " names nil t))))
+     (setq rk/default-audio-device (rk/find-device-matching name :audio))
+     (when (boundp 'whisper--ffmpeg-input-device)
+       (setq whisper--ffmpeg-input-device (format ":%s" rk/default-audio-device)))))
+
+ (setq whisper-install-directory "/tmp/"
+       whisper-model "base"
+       whisper-language "en"
+       whisper-translate nil
+       whisper-use-threads (/ (num-processors) 2)))
 #+end_src
+
 *** Copilot
 #+begin_src emacs-lisp :tangle yes
 ;; accept completion from copilot and fallback to corfu
@@ -1584,17 +1663,25 @@ numbers are disabled. For relative line numbers, set this to `relative'.
               ("C-<tab>" . 'copilot-accept-completion-by-word)))
 #+end_src
 
-#+RESULTS:
-
+** Completion
+#+begin_src emacs-lisp :tangle yes
+(setq lsp-headerline-breadcrumb-enable 't)
+(set-lookup-handlers! 'lsp-ui-doc-mode :documentation #'lsp-ui-doc-glance)
+(after! corfu
+   (setq corfu-preselect 'valid)
+   (add-hook 'completion-at-point-functions #'cape-file)
+   (add-hook! org-mode (add-hook 'completion-at-point-functions #'cape-dict 0 't)))
+#+end_src
 ** Doom-modeline
 #+begin_src emacs-lisp :tangle config.el
 (setq mode-line-right-align-edge 'right-fringe)
 (setq nerd-icons-scale-factor 1.0)
 (setq doom-modeline-height 1) ; optional
 (custom-set-faces
-  '(mode-line ((t (:family "Liga SFMono Nerd Font" :height 0.8))))
-  '(mode-line-inactive ((t (:family "Liga SFMono Nerd Font" :height 0.8)))))
+  '(mode-line ((t (:family my/fixed-width-font :height 0.8))))
+  '(mode-line-inactive ((t (:family my/fixed-width-font :height 0.8)))))
 #+end_src
+
 ** Leetcode
 #+begin_src emacs-lisp :tangle yes
 (setq leetcode-prefer-language "python3")
@@ -1649,9 +1736,6 @@ numbers are disabled. For relative line numbers, set this to `relative'.
   (add-to-list 'mm-discouraged-alternatives "text/html")
   (add-to-list 'mm-discouraged-alternatives "text/richtext"))
 #+end_src
-
-#+RESULTS:
-| text/richtext | text/html |
 
 *** Bookmarks
 the following is to show shortcuts in the main view.
@@ -1827,8 +1911,6 @@ Consider adding this file to your list of agenda files so that events show up th
 (require 'khalel-icalendar)
 #+end_src
 
-#+RESULTS:
-
 ** PDF
 *** Noter
 #+begin_src emacs-lisp :tangle config.el
@@ -1870,10 +1952,17 @@ Consider adding this file to your list of agenda files so that events show up th
 #+begin_src emacs-lisp :tangle config.el
 (add-hook 'sql-mode-hook 'lsp)
 #+end_src
+** Kotlin
+#+begin_src emacs-lisp :tangle yes
+(org-babel-do-load-languages 'org-babel-load-languages '((java . t)
+                                                         (kotlin . t)))
+#+end_src
 ** Org
 #+begin_src emacs-lisp :tangle config.el
 (after! org
-        (setq org-todo-keywords '((sequence "REVIEW(r)" "TODO(t)" "STARTED(s)" "HOLD(h)" "|" "DONE(d)" "KILL(k)")
+        (setq org-startup-with-inline-images 't)
+        (setq org-startup-with-latex-preview 't)
+        (setq org-todo-keywords '((sequence "REVIEW(r)" "TODO(t)" "HOLD(h)" "LOOP(l)" "|" "DONE(d)" "KILL(k)")
                                   (sequence "EVENT(e)" "NOTE(n)" "PROJ(p)" "|")))
         (defun update-reviewed ()
                 (interactive "*")
@@ -1926,93 +2015,146 @@ Consider adding this file to your list of agenda files so that events show up th
                         '("c" "Project-local changelog" entry (file+headline +org-capture-project-changelog-file "Unreleased") "* %U %?\n%i\n%a"
                                 :unnarrowed t))))
 #+end_src
+*** Org-agenda
+#+begin_src emacs-lisp :tangle yes
+(after! org
+  (defun my/agenda ()
+    (interactive)
+    (org-agenda nil "n"))
+
+  (map! :leader :desc "My Agenda" :n ";" #'my/agenda)
+
+   ;; This is here because I will forget how to do this
+   ;; (setq org-agenda-custom-commands
+   ;;     (tags-todo "+LEVEL=1+TODO=\"TODO\"" ((org-agenda-overriding-header "")
+   ;;                                          (org-agenda-todo-keyword-format ""))))
+  (setq
+   org-agenda-time-grid  '((daily today) (800 1000 1200 1400 1600 1800 2000) " " "---")
+   org-agenda-start-day 'nil
+   org-agenda-custom-commands
+   '(("n" "Today and TODOs"
+      ((agenda "" ((org-agenda-overriding-header "")
+                   (org-agenda-include-diary t)
+                   (org-deadline-warning-days 7)
+                   (org-agenda-span 'day)))
+       (todo "TODO" ((org-agenda-overriding-header "")
+                     (org-agenda-sorting-strategy '(timestamp-up))
+                     (org-agenda-todo-keyword-format "")))
+       (todo "REVIEW" ((org-agenda-overriding-header "")
+                       (org-agenda-sorting-strategy '(timestamp-up))
+                       (org-agenda-todo-keyword-format "")))
+       (todo "NOTE" ((org-agenda-overriding-header "")
+                     (org-agenda-sorting-strategy '(timestamp-up))
+                     (org-agenda-todo-keyword-format "")))
+       (todo "HOLD" ((org-agenda-overriding-header "")
+                     (org-agenda-sorting-strategy '(timestamp-up))
+                     (org-agenda-todo-keyword-format "")))
+       ())))))
+#+end_src
+*** Ox-hugo
+#+begin_src emacs-lisp :tangle yes
+(require 'ox-hugo)
+#+end_src
+
 *** Org-present
 #+begin_src emacs-lisp :tangle yes
-;; Load org-faces to make sure we can set appropriate faces
-(require 'org-faces)
-
-;; Hide emphasis markers on formatted text
-(setq org-hide-emphasis-markers t)
-
-;; Make sure certain org faces use the fixed-pitch face when variable-pitch-mode is on
-(set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
-(set-face-attribute 'org-table nil :inherit 'fixed-pitch)
-(set-face-attribute 'org-formula nil :inherit 'fixed-pitch)
-(set-face-attribute 'org-code nil :inherit '(success fixed-pitch))
-(set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
-(set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
-(set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
-(set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch)
-
-
 (after! org-present
-  (defun my/org-present-toggle-cursor ()
-          (interactive)
-          (if cursor-hidden (progn (org-present-show-cursor)
-                             (hl-line-mode 1)
-                             (setq cursor-hidden 'nil)
-                             (message "Cursor Shown"))
-                            (progn (org-present-hide-cursor)
-                             (hl-line-mode 0)
-                             (setq cursor-hidden 't)
-                             (message "Cursor Hidden"))))
 
-  (defun my/org-present-start ()
-          (display-line-numbers-mode 0)
-          (hide-mode-line-mode 1)
-          (flyspell-mode 0)
-          (flycheck-mode 0)
-          (writegood-mode 0)
-          (hl-line-mode 0)
-          (org-present-hide-cursor)
-          (setq cursor-hidden 't)
-          ;; Tweak font sizes
-          (setq-local face-remapping-alist '((default (:height 1.5) variable-pitch)
-                                             (header-line (:height 4.0) variable-pitch)
-                                             (org-document-title (:height 1.75) org-document-title)
-                                             (org-code (:height 1.55) org-code)
-                                             (org-verbatim (:height 1.55) org-verbatim)
-                                             (org-block (:height 1.25) org-block)
-                                             (org-block-begin-line (:height 0.7) org-block))))
+  (map! :map org-mode-map
+        :i "SPC" 'nil
+        :n "J" 'nil
+        :niv "s-[" #'my/org-present-prev
+        :niv "s-]" #'my/org-present-next)
 
-  (defun my/org-present-end ()
-          ;; Stop centering the document
-          (display-line-numbers-mode 1)
-          (hide-mode-line-mode 0)
-          (flyspell-mode 1)
-          (flycheck-mode 1)
-          (writegood-mode 1)
-          (hl-line-mode 1)
-          (org-present-show-cursor)
-          (setq cursor-hidden 'nil)
-          ;; Reset font customizations
-          (setq-local face-remapping-alist '((default default default))))
-          ;; Clear the header line format by setting to `nil'
+  ;; Configure fill width
+ (setq visual-fill-column-width 130
+       visual-fill-column-center-text t)
 
-  (defun my/org-present-prepare-slide (buffer-name heading)
-          ;; Show only top-level headlines
-          (org-overview)
+ (defun my/org-present-next (&optional ARG)
+   (interactive)
+   (unless ARG (setq ARG 1))
+   (my/org-present-change-heading ARG))
 
-          ;; Unfold the current entry
-          (org-show-entry)
+ (defun my/org-present-prev (&optional ARG)
+   (interactive)
+   (if ARG (setq ARG (- ARG))(setq ARG -1))
+   (my/org-present-change-heading ARG))
 
-          ;; Show only direct subheadings of the slide but don't expand them
-          (org-show-children))
+ (defun my/org-present-change-heading (ARG)
+   (doom/widen-indirectly-narrowed-buffer)
+   (org-next-visible-heading ARG)
+   (org-narrow-to-subtree)
+   (my/org-present-prepare-slide))
 
-          ;; Register hooks with org-present
-  (add-hook 'org-present-after-navigate-functions 'my/org-present-prepare-slide)
-  (add-hook 'org-present-mode-hook 'my/org-present-start)
-  (add-hook 'org-present-mode-quit-hook 'my/org-present-end))
+ (defun my/org-present-toggle-cursor ()
+   (interactive)
+   (if cursor-hidden (progn (org-present-show-cursor)
+                            (hl-line-mode 1)
+                            (setq cursor-hidden 'nil)
+                            (message "Cursor Shown"))
+     (progn (org-present-hide-cursor)
+            (hl-line-mode 0)
+            (setq cursor-hidden 't)
+            (message "Cursor Hidden"))))
+
+ (defun my/org-present-start ()
+   (display-line-numbers-mode 0)
+   (hide-mode-line-mode 1)
+   (flyspell-mode 0)
+   (flycheck-mode 0)
+   (writegood-mode 0)
+   ;; Center the presentation and wrap lines
+   (visual-fill-column-mode 1)
+   (visual-line-mode 1)
+   (org-present-show-cursor)
+   ;; Set a blank header line string to create blank space at the top
+   (setq header-line-format "")
+   ;; Tweak font sizes
+   (setq-local face-remapping-alist '((default (:height 1.3) variable-pitch)
+                                      (header-line (:height 3.7) variable-pitch)
+                                      (org-link (:height 1.3) org-drawer)
+                                      (org-document-title (:height 1.6) org-document-title)
+                                      (org-code (:height 1.25) org-code)
+                                      (org-verbatim (:height 1.3) org-verbatim)
+                                      (org-block (:height 1.1) org-block)
+                                      (org-block-begin-line (:height 0.7) org-block))))
+
+ (defun my/org-present-end ()
+   (display-line-numbers-mode 1)
+   (hide-mode-line-mode 0)
+   (flyspell-mode 1)
+   (flycheck-mode 1)
+   (writegood-mode 1)
+   ;; Stop centering the document
+   (visual-fill-column-mode 0)
+   (visual-line-mode 0)
+   (setq header-line-format 'nil)
+   ;; Reset font customizations
+   (setq-local face-remapping-alist '((default default default))))
+  ;; Clear the header line format by setting to `nil'
+
+ (defun my/org-present-prepare-slide ()
+   ;; Show only top-level headlines
+   (org-overview)
+
+   ;; Unfold the current entry
+   (org-show-entry)
+
+   ;; Show only direct subheadings of the slide but don't expand them
+   (org-show-children))
+
+ (defun my/org-present-navigate (buffer-name heading)
+   (my/org-present-prepare-slide))
+
+  ;; Register hooks with org-present
+ (add-hook 'org-present-after-navigate-functions 'my/org-present-navigate)
+ (add-hook 'org-present-mode-hook 'my/org-present-start)
+ (add-hook 'org-present-mode-quit-hook 'my/org-present-end))
 #+end_src
 
 *** Org-roam
 #+begin_src emacs-lisp :tangle config.el
 (after! org-roam
-  (defun my/definition-node-template ()
-    (concat "** %i%?\n")
-    ":PROPERTIES:\n"
-    ":ID: " (org-id-new)
-    "\n:END:")
   (setq org-roam-directory (file-truename org-directory)
         org-roam-dailies-directory "journal/"
         org-roam-db-update-on-save 't
@@ -2030,10 +2172,6 @@ Consider adding this file to your list of agenda files so that events show up th
                  :unnarrowed 't)
          (list "b" "Blog" 'plain "%i%?"
                  :target (list 'file+head "blog/content/${slug}.org" postHead)
-                 :unnarrowed 't)
-         (list "d" "Definition" 'entry "** %i%?"
-                 :target (list 'file+head+olp "pages/${slug}.org" postHead '("Definitions"))
-                 :prepend 't
                  :unnarrowed 't)
          (list "j" "Journal")
          (list "jt" "Journal Todo" 'entry "* TODO %i%?"
@@ -2057,9 +2195,9 @@ Consider adding this file to your list of agenda files so that events show up th
          '("r" "Inbox Review" entry "* REVIEW %a%?\nSCHEDULED: <%<%Y-%m-%d %a>>"
            :target (file+head "inbox.org" "#+title: Inbox\n")
            :immediate-finish 't)
-         '("t" "Inbox Todo" entry "** TODO %i%?"
+         '("t" "Inbox Todo" entry "* TODO %i%?"
            :target (file+head "inbox.org" "#+title: Inbox\n"))
-         '("n" "Inbox Note" entry "** %i%?"
+         '("n" "Inbox Note" entry "* NOTE %i%?"
            :target (file+head "inbox.org" "#+title: Inbox\n"))
          '("p" "Inbox Plain" plain "%i%?"
            :target (file+head "inbox.org" "#+title: %<%Y-%m-%d>\n")
@@ -2067,9 +2205,6 @@ Consider adding this file to your list of agenda files so that events show up th
            :unnarrowed t)))
   (require 'org-roam-export))
 #+end_src
-
-#+RESULTS:
-: org-roam-export
 
 *** TODO NotDeft
 #+begin_src emacs-lisp :tangle config.el
