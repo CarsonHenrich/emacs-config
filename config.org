@@ -190,14 +190,12 @@ installing doom and various other information about the file.
 #+html: </details>
 
 ** Using Emacs Customize
+[[https://github.com/doomemacs/doomemacs/blob/master/docs/faq.org#why-does-doom-discourage-the-use-of-m-x-customize][Doom does not recommend the Emacs =customize= mechanism:]]
 
-Doom [[https://github.com/hlissner/doom-emacs/blob/develop/docs/getting_started.org#configure][does not recommend the Emacs =customize= mechanism]]:
-
-#+begin_quote
-/Note: do not use M-x customize or the customize API in general. Doom is designed to be configured programmatically from your config.el, which can conflict with Customize’s way of modifying variables./
-#+end_quote
-
-All necessary settings are therefore set by hand as part of this configuration file. The only exceptions are "safe variable" and "safe theme" settings, which are automatically saved by Emacs in =custom.el=, but this is OK as they don't conflict with anything else from the config.
+All necessary settings are therefore set by hand as part of this configuration
+file. The only exceptions are "safe variable" and "safe theme" settings, which
+are automatically saved by Emacs in =custom.el=, but this is OK as they don't
+conflict with anything else from the config.
 
 * Doom Modules
 This generates the =doom!= block of =init.el= which defines what should be
@@ -402,6 +400,7 @@ This is where packages not included in modules are placed to install them.
 (package! printing)
 (package! gptel)
 (package! ellama)
+(package! org-roam-ql)
 (package! spray
   :recipe (:host github :repo "emacsmirror/spray" :files ("*.el")))
 (package! ob-kotlin)
@@ -409,6 +408,8 @@ This is where packages not included in modules are placed to install them.
   :recipe (:host github :repo "copilot-emacs/copilot.el" :files ("*.el")))
 (package! whisper
   :recipe (:host github :repo "natrys/whisper.el" :files ("*.el")))
+(unpin! org-roam)
+(package! org-roam-ui)
 #+end_src
 * General Configuration
   #+begin_src emacs-lisp :tangle config.el
@@ -572,7 +573,7 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 #+RESULTS:
 : t
 
-* Keybindings
+* Keymaps
 #+begin_src emacs-lisp :tangle config.el
 (load! "~/.config/doom/keybinds.el")
 #+end_src
@@ -1242,7 +1243,6 @@ numbers are disabled. For relative line numbers, set this to `relative'.
  (:when (modulep! :lang org +noter)
    (:map org-mode-map
     :localleader
-    :desc "Noter"                       "n" #'org-noter
     :desc "Import Skeleton"             "S" #'org-noter-create-skeleton
     :desc "Goto Notes page"             ";" #'org-noter-sync-current-note
     :desc "Goto next notes page"        "j" #'org-noter-sync-prev-note
@@ -1460,7 +1460,8 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 
  (:map org-mode-map
   :desc "Move to Next Visible Heading"      :n "] h" #'org-next-visible-heading
-  :desc "Move to Previous Visible Heading"  :n "[ h" #'org-previous-visible-heading)
+  :desc "Move to Previous Visible Heading"  :n "[ h" #'org-previous-visible-heading
+  :localleader :desc "Add Note"             :n "n" #'my/org-add-note)
 
  (:localleader
   :desc "Remove Result"        :n "u" #'org-babel-remove-result
@@ -1497,10 +1498,13 @@ numbers are disabled. For relative line numbers, set this to `relative'.
   :desc "Toggle last org-clock"        "c" #'+org/toggle-last-clock
   :desc "Cancel current org-clock"     "C" #'org-clock-cancel
   (:prefix  ("d" . "date")
-   :desc "Deadline"             :n "d" #'org-deadline
-   :desc "Schedule"             :n "s" #'org-schedule
-   :desc "Active Timestamp"     :n "t" #'org-time-stamp
-   :desc "Inactive Timestamp"   :n "T" #'org-time-stamp-inactive)
+   :desc "Deadline"                       :n "d" #'org-deadline
+   :desc "Schedule"                       :n "s" #'org-schedule
+   :desc "Active Timestamp"               :n "t" #'org-time-stamp
+   :desc "Active Timestamp with Time"     :n "T" #'my/org-time-stamp-with-time
+   :desc "Inactive Timestamp"             :n "i" #'org-time-stamp-inactive
+   :desc "Inactive Timestamp with Time"   :n "I" #'my/org-time-stamp-inactive-with-time)
+
   (:when (modulep! :tools biblio)
     :desc "Bibliographic notes"        "b"
     (cond ((modulep! :completion vertico)  #'citar-open-notes)
@@ -1514,7 +1518,7 @@ numbers are disabled. For relative line numbers, set this to `relative'.
     :desc "Insert ID"        "I" #'org-id-get-create
     :desc "Capture Node"       "n" #'org-roam-capture
     :desc "Refile Node"        "N" #'org-roam-refile
-    :desc "Update Reviewed"    "R" #'update-reviewed
+    :desc "Update Reviewed"    "R" #'my/update-reviewed
     :desc "Extract Subtree"    "x" #'org-roam-extract-subtree
     (:prefix  ("d" . "date")
      :desc "Goto Today"           "g" #'org-roam-dailies-goto-today
@@ -1960,15 +1964,15 @@ Consider adding this file to your list of agenda files so that events show up th
 ** Org
 #+begin_src emacs-lisp :tangle config.el
 (after! org
-        (setq org-startup-with-inline-images 't)
         (setq org-startup-with-latex-preview 't)
+        (setq org-startup-with-inline-images 't)
         (setq org-todo-keywords '((sequence "REVIEW(r)" "TODO(t)" "HOLD(h)" "LOOP(l)" "|" "DONE(d)" "KILL(k)")
                                   (sequence "EVENT(e)" "NOTE(n)" "PROJ(p)" "|")))
-        (defun update-reviewed ()
+        (defun my/update-reviewed ()
                 (interactive "*")
-                (org-set-property "Reviewed" (format-time-string "%Y-%m-%d")))
+                (org-set-property "REVIEWED" (format-time-string "%Y-%m-%d %H:%M:%S")))
 
-        (defun transform-title ()
+        (defun my/transform-title ()
                 "Take a title for an org mode note as a heading and turn it into a title"
                 (interactive "*")
                 (beginning-of-buffer)
@@ -1981,8 +1985,31 @@ Consider adding this file to your list of agenda files so that events show up th
           (interactive)
           (org-clock-goto 'select))
 
+        (defun my/org-add-note ()
+          (interactive)
+          (org-fold-show-entry)
+          (let ((position (- (org-entry-end-position) 1)))
+               (goto-char position)
+               (let* ((org_list (org-list-struct))
+                      (prevs (org-list-prevs-alist org_list)))
+                 (if (eq org_list 'nil) (progn
+                                          (newline-and-indent)
+                                          (insert "- Note taken on "))
+                                        (org-list-insert-item position org_list prevs 'nil "Note taken on "))
+                 (org-end-of-line)
+                 (org-time-stamp-inactive '(16))
+                 (newline-and-indent)
+                 (evil-insert 1))))
+
+        (defun my/org-time-stamp-inactive-with-time ()
+          (interactive)
+          (org-time-stamp-inactive 't))
+
+        (defun my/org-time-stamp-with-time ()
+          (interactive)
+          (org-time-stamp 't))
+
         (add-hook #'org-mode-hook #'evil-tex-mode)
-        (add-hook #'before-save-hook #'org-update-all-dblocks)
         (add-hook #'before-save-hook #'org-update-all-dblocks)
         (add-hook #'auto-save-hook #'org-save-all-org-buffers)
         (add-hook #'org-clock-in-hook #'org-save-all-org-buffers)
@@ -1993,7 +2020,7 @@ Consider adding this file to your list of agenda files so that events show up th
 
         (setq
                 org-attach-auto-tag nil
-                org-startup-folded 'content
+                org-startup-folded 'fold
                 org-directory (file-truename "~/org/")
                 +org-capture-central-project-todo-file "journal/projects.org"
                 +org-capture-central-project-changelog-file "journal/projects.org"
@@ -2015,14 +2042,16 @@ Consider adding this file to your list of agenda files so that events show up th
                         '("c" "Project-local changelog" entry (file+headline +org-capture-project-changelog-file "Unreleased") "* %U %?\n%i\n%a"
                                 :unnarrowed t))))
 #+end_src
+
 *** Org-agenda
 #+begin_src emacs-lisp :tangle yes
 (after! org
-  (defun my/agenda ()
+  (defun my/org-agenda ()
     (interactive)
     (org-agenda nil "n"))
 
-  (map! :leader :desc "My Agenda" :n ";" #'my/agenda)
+
+  (map! :leader :desc "My Agenda" :n ";" #'my/org-agenda)
 
    ;; This is here because I will forget how to do this
    ;; (setq org-agenda-custom-commands
@@ -2187,25 +2216,49 @@ Consider adding this file to your list of agenda files so that events show up th
         (list "jr" "Journal Review" 'entry "* REVIEW %a%?\nSCHEDULED: <%<%Y-%m-%d %a>>"
                 :target (list 'file+head "journal/${slug}.org" noteHead)
                 :unnarrowed 't))))
+  (defun nom/org-roam-capture-create-id ()
+    "Create id for captured note and add it to org-roam-capture-template."
+    (when (and (not org-note-abort) (org-roam-capture-p))
+      (org-roam-capture--put :id (org-id-get-create))))
 
-  (setq org-roam-dailies-capture-templates
-        (list
-         '("x" "Quick" entry "* REVIEW %i%?\nSCHEDULED: <%<%Y-%m-%d %a>>"
-           :target (file+head "inbox.org" "#+title: Inbox\n"))
-         '("r" "Inbox Review" entry "* REVIEW %a%?\nSCHEDULED: <%<%Y-%m-%d %a>>"
-           :target (file+head "inbox.org" "#+title: Inbox\n")
-           :immediate-finish 't)
-         '("t" "Inbox Todo" entry "* TODO %i%?"
-           :target (file+head "inbox.org" "#+title: Inbox\n"))
-         '("n" "Inbox Note" entry "* NOTE %i%?"
-           :target (file+head "inbox.org" "#+title: Inbox\n"))
-         '("p" "Inbox Plain" plain "%i%?"
-           :target (file+head "inbox.org" "#+title: %<%Y-%m-%d>\n")
-           :empty-lines-before 1
-           :unnarrowed t)))
-  (require 'org-roam-export))
+ (add-hook 'org-capture-prepare-finalize-hook 'nom/org-roam-capture-create-id)
+
+
+ (setq org-roam-dailies-capture-templates
+       (list
+        '("x" "Quick" entry "* REVIEW %i%?\nSCHEDULED: <%<%Y-%m-%d %a>>"
+          :target (file+head "inbox.org" "#+title: Inbox\n"))
+        '("r" "Inbox Review" entry "* REVIEW %a%?\nSCHEDULED: <%<%Y-%m-%d %a>>"
+          :target (file+head "inbox.org" "#+title: Inbox\n")
+          :immediate-finish 't)
+        '("t" "Inbox Todo" entry "* TODO %i%?"
+          :target (file+head "inbox.org" "#+title: Inbox\n"))
+        '("n" "Inbox Note" entry "* NOTE %i%?"
+          :target (file+head "inbox.org" "#+title: Inbox\n"))
+        '("p" "Inbox Plain" plain "%i%?"
+          :target (file+head "inbox.org" "#+title: %<%Y-%m-%d>\n")
+          :empty-lines-before 1
+          :unnarrowed t)))
+ (require 'org-roam-export))
 #+end_src
 
+**** Org-Roam-UI
+#+begin_src emacs-lisp :tangle yes
+(use-package! websocket
+    :after org-roam)
+
+(use-package! org-roam-ui
+    :after org-roam ;; or :after org
+;;         normally we'd recommend hooking orui after org-roam, but since org-roam does not have
+;;         a hookable mode anymore, you're advised to pick something yourself
+;;         if you don't care about startup time, use
+;;  :hook (after-init . org-roam-ui-mode)
+    :config
+    (setq org-roam-ui-sync-theme t
+          org-roam-ui-follow t
+          org-roam-ui-update-on-save t
+          org-roam-ui-open-on-start t))
+#+end_src
 *** TODO NotDeft
 #+begin_src emacs-lisp :tangle config.el
 ;; (after! deft
@@ -2252,8 +2305,3 @@ Consider adding this file to your list of agenda files so that events show up th
   (setcdr (assq 'output-pdf TeX-view-program-selection) '("Zathura")))
 #+end_src
 
-* Local Variables :noexport:
-The below will ask if you want to tangle the config on save.
-# ;;; Local Variables: ***
-# ;;; after-save-hook: (lambda () (if (yes-or-no-p "Tangle?") (org-babel-tangle) 'nil)) ***
-# ;;; End: ***
