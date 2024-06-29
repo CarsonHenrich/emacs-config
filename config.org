@@ -421,7 +421,7 @@ This is where packages not included in modules are placed to install them.
         user-full-name "Carson Henrich"
         user-mail-address "carson03henrich@gmail.com"
         display-time-format "%Y-%m-%d %H:%M"
-        initial-buffer-choice (lambda () (org-roam-dailies-goto-today "p") (current-buffer)))
+        initial-buffer-choice (lambda () (find-file (my/org-capture-week-file)) (current-buffer)))
 (display-time-mode 1)
 (auto-revert-mode 1)
 (toggle-text-mode-auto-fill)
@@ -2023,14 +2023,13 @@ Consider adding this file to your list of agenda files so that events show up th
    (org-set-property "CREATED" (org-timestamp-translate (org-timestamp-from-time (current-time) 't 't))))
 
 
- (defun capture-week-file ()
+ (defun my/org-capture-week-file ()
    "Return the filename of the current capture week file creating it if it doesn't exist"
    (let ((filename
           (expand-file-name (format-time-string "%Y-W%W.org") org-weekly-directory)))
-        ;;(unless (f-exists? filename) (append-to-file org-weekly-head nil filename))
         filename))
 
- (defun quick-capture ()
+ (defun my/org-quick-capture-template ()
    (let* ((scheduled (when (y-or-n-p "Scheduled?")
                                (concat ":SCHEDULED:" (org-timestamp-translate  (org-timestamp-from-time (org-read-date 'nil 't))))))
          (deadline (when (y-or-n-p "Deadline?")
@@ -2083,8 +2082,8 @@ Consider adding this file to your list of agenda files so that events show up th
  (add-hook! #'org-clock-in-hook #'org-save-all-org-buffers)
  (add-hook! #'org-clock-out-hook #'org-save-all-org-buffers)
  (add-hook! 'org-capture-prepare-finalize-hook #'my/org-capture-add-created)
-     (add-hook! 'org-capture-prepare-finalize-hook #'my/org-todo)
-     (add-hook! 'org-capture-prepare-finalize-hook #'my/org-set-tags))
+ (add-hook! 'org-capture-prepare-finalize-hook #'my/org-todo)
+ (add-hook! 'org-capture-prepare-finalize-hook #'my/org-set-tags)
 
  (setq
         org-todo-keywords '((sequence "TODO(t)" "HOLD(h)" "|" "DONE(d)" "KILL(k)"))
@@ -2094,14 +2093,14 @@ Consider adding this file to your list of agenda files so that events show up th
 
  (setq org-capture-templates
        '(("x" "Quick" entry
-          (file capture-week-file)
-          (function quick-capture))
+          (file my/org-capture-week-file)
+          (function my/org-quick-capture-template))
         ("r" "Review" entry
-         (file capture-week-file)
+         (file my/org-capture-week-file)
          "* TODO Review %a%? :Inbox:Review:\n"
          :immediate-finish 't)
         ("n" "Current Task" entry
-          (file capture-week-file)
+          (file my/org-capture-week-file)
           "* TODO %i%? \n"
           :clock-in t)
         ("p" "Project-local")
@@ -2110,9 +2109,7 @@ Consider adding this file to your list of agenda files so that events show up th
         ("pn" "Project-local Notes" entry (file +org-capture-project-notes-file) "* %? :Inbox:\n%i\n%a"
           :unnarrowed t)
         ("pc" "Project-local Changelog" entry (file+headline +org-capture-project-changelog-file "Unreleased") "* %?\n%i\n%a"
-          :unnarrowed t)))
-
-
+          :unnarrowed t))))
 #+end_src
 
 *** Org-agenda
@@ -2306,61 +2303,26 @@ Consider adding this file to your list of agenda files so that events show up th
 *** Org-roam
 #+begin_src emacs-lisp :tangle config.el
 (after! org-roam
-  (setq org-roam-directory (file-truename org-directory)
-        org-roam-dailies-directory "journal/"
+  (setq org-roam-directory (expand-file-name org-directory "roam/")
         org-roam-db-update-on-save 't
-        org-roam-extract-new-file-path "pages/%<%Y%m%d%H%M%S>-${slug}.org"
-        org-roam-file-exclude-regexp
-        org-file-exclude-regexp)
+        org-roam-extract-new-file-path "notes/%<%Y%m%d%H%M%S>-${slug}.org"
+        org-roam-file-exclude-regexp org-file-exclude-regexp)
 
   (let ((noteHead "#+title: ${title}\n")
         (postHead "#+title: ${title}\n"))
     (setq org-roam-capture-templates
      (list
-         (list "p" "Page" 'plain "%i%?"
-                 :target (list 'file+head "pages/%<%Y%m%d%H%M%S>-${slug}.org" noteHead)
+         (list "n" "Note" 'plain "* %i%?"
+                 :target (list 'file+head "notes/%<%Y%m%d%H%M%S>-${slug}.org" noteHead)
                  :empty-lines-before 1
-                 :unnarrowed 't)
-         (list "b" "Blog" 'plain "%i%?"
-                 :target (list 'file+head "blog/content/${slug}.org" postHead)
-                 :unnarrowed 't)
-         (list "j" "Journal")
-         (list "jt" "Journal Todo" 'entry "* TODO %i%?"
-                 :target (list 'file+head "journal/${slug}.org" noteHead)
-                 :unnarrowed 't)
-         (list "jn" "Journal Note" 'entry "* NOTE %i%?"
-                 :target (list 'file+head "journal/${slug}.org" noteHead)
-                 :unnarrowed 't)
-         (list "jp" "Journal Page" 'plain "%i%?"
-                 :target (list 'file+head "journal/${slug}.org" noteHead)
-                 :empty-lines-before 1
-                 :unnarrowed 't)
-        (list "jr" "Journal Review" 'entry "* REVIEW %a%?\nSCHEDULED: <%<%Y-%m-%d %a>>"
-                :target (list 'file+head "journal/${slug}.org" noteHead)
-                :unnarrowed 't))))
+                 :unnarrowed 't))))
+
   (defun nom/org-roam-capture-create-id ()
     "Create id for captured note and add it to org-roam-capture-template."
     (when (and (not org-note-abort) (org-roam-capture-p))
       (org-roam-capture--put :id (org-id-get-create))))
 
  (add-hook 'org-capture-prepare-finalize-hook 'nom/org-roam-capture-create-id)
-
-
- (setq org-roam-dailies-capture-templates
-       (list
-        '("x" "Quick" entry "* REVIEW %i%?\nSCHEDULED: <%<%Y-%m-%d %a>>"
-          :target (file+head "inbox.org" "#+title: Inbox\n"))
-        '("r" "Inbox Review" entry "* REVIEW %a%?\nSCHEDULED: <%<%Y-%m-%d %a>>"
-          :target (file+head "inbox.org" "#+title: Inbox\n")
-          :immediate-finish 't)
-        '("t" "Inbox Todo" entry "* TODO %i%?"
-          :target (file+head "inbox.org" "#+title: Inbox\n"))
-        '("n" "Inbox Note" entry "* NOTE %i%?"
-          :target (file+head "inbox.org" "#+title: Inbox\n"))
-        '("p" "Inbox Plain" plain "%i%?"
-          :target (file+head "inbox.org" "#+title: %<%Y-%m-%d>\n")
-          :empty-lines-before 1
-          :unnarrowed t)))
  (require 'org-roam-export))
 #+end_src
 
