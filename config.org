@@ -290,7 +290,7 @@ doom block.
        (:if (executable-find "git") (magit +forge)) ; a git porcelain for Emacs
        make                                         ; run make tasks from Emacs
        (:if (executable-find "pass") (pass +auth))  ; password manager for nerds
-       pdf                                          ; pdf enhancements NOTE FOR MACOS https://github.com/politza/pdf-tools/issues/645
+       pdf                                          ; pdf enhancements NOTE FOR MACOS https://github.com/politza/pdf-tools/issues/645#issuecomment-775496734
        rgb                                          ; creating color strings
        ;;terraform                                  ; infrastructure as code
        (:if (executable-find "tmux") (tmux))        ; an API for interacting with tmux
@@ -385,32 +385,36 @@ doom block.
        (default +smartparens))
 #+end_src
 
-** SQL
 * Packages
 This is where packages not included in modules are placed to install them.
 #+begin_src emacs-lisp :tangle packages.el
 (package! engrave-faces)
 (package! leetcode)
-(package! ox-hugo)
-(package! org-present)
 (package! synosaurus)         ; thesuarus that doesn't get installed with lookup for some reason
 (package! djvu)
 (package! all-the-icons)
 (package! nov)
 (package! printing)
-(package! gptel)
-(package! ellama)
-(package! org-roam-ql)
 (package! spray
   :recipe (:host github :repo "emacsmirror/spray" :files ("*.el")))
+
+(unpin! org-roam)
+(package! org-roam-ui)
+(package! org-roam-ql)
+(package! org-modern)
+(package! org-present)
+(package! ox-hugo)
 (package! ob-kotlin)
+(package! ob-mermaid)
+
+(package! gptel)
+(package! ellama)
 (package! copilot
   :recipe (:host github :repo "copilot-emacs/copilot.el" :files ("*.el")))
 (package! whisper
   :recipe (:host github :repo "natrys/whisper.el" :files ("*.el")))
-(unpin! org-roam)
-(package! org-roam-ui)
 #+end_src
+
 * General Configuration
   #+begin_src emacs-lisp :tangle config.el
 (setq
@@ -508,14 +512,14 @@ refresh your font settings. If Emacs still can't find your font, it likely
 wasn't installed correctly. Font issues are rarely Doom issues!
 #+begin_src emacs-lisp :tangle config.el
 ;; Set reusable font name variables
-(defvar my/fixed-width-font "JetBrainsMono Nerd Font"
+(defvar my/fixed-width-font "Iosevka Nerd Font Mono"
   "The font to use for monospaced (fixed width) text.")
 
-(defvar my/variable-width-font "Liberation Sans"
+(defvar my/variable-width-font "Iosevka Aile"
   "The font to use for variable-pitch (document) text.")
 
 (setq
-    doom-unicode-font (font-spec :family "FiraCode Nerd Font")
+    doom-unicode-font (font-spec :family my/fixed-width-font)
     doom-font (font-spec :family my/fixed-width-font :size 15 :weight 'light)
     doom-big-font (font-spec :family my/fixed-width-font :size 18 :weight 'light)
     doom-variable-pitch-font (font-spec :family my/variable-width-font :size 14 :weight 'light))
@@ -575,8 +579,100 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 
 * Keymaps
 #+begin_src emacs-lisp :tangle config.el
-(load! "~/.config/doom/keybinds.el")
+(load! "~/.config/doom/keymaps.el")
 #+end_src
+** Global
+*** Help
+#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+      (map!
+        (:after help :map help-mode-map
+                :n "o"       #'link-hint-open-link)
+        (:after helpful :map helpful-mode-map
+                :n "o"       #'link-hint-open-link)
+        (:after info :map Info-mode-map
+                :n "o"       #'link-hint-open-link)
+        (:after geiser-doc :map geiser-doc-mode-map
+                :n "o"       #'link-hint-open-link)
+        (:after apropos :map apropos-mode-map
+                :n "o"       #'link-hint-open-link
+                :n "TAB"     #'forward-button
+                :n [tab]     #'forward-button
+                :n [backtab] #'backward-button)
+        (:after view :map view-mode-map
+                [escape]  #'View-quit-all)
+        (:after man :map Man-mode-map
+                :n "q"    #'kill-current-buffer))
+#+end_src
+
+*** Evil
+#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+(when (modulep! :editor evil +everywhere)
+  ;; Minibuffer
+  (map! :map (evil-ex-completion-map evil-ex-search-keymap)
+        "C-a" #'evil-beginning-of-line
+        "C-b" #'evil-backward-char
+        "C-f" #'evil-forward-char
+        :gi "C-j" #'next-complete-history-element
+        :gi "C-k" #'previous-complete-history-element)
+
+  (define-key! :keymaps +default-minibuffer-maps
+    [escape] #'abort-recursive-edit
+    "C-a"    #'move-beginning-of-line
+    "C-r"    #'evil-paste-from-register
+    "C-u"    #'evil-delete-back-to-indentation
+    "C-v"    #'yank
+    "C-w"    #'doom/delete-backward-word
+    "C-z"    (cmd! (ignore-errors (call-interactively #'undo))))
+
+  (define-key! :keymaps +default-minibuffer-maps
+    "C-j"    #'next-line
+    "C-k"    #'previous-line
+    "C-S-j"  #'scroll-up-command
+    "C-S-k"  #'scroll-down-command)
+  ;; For folks with `evil-collection-setup-minibuffer' enabled
+  (define-key! :states 'insert :keymaps +default-minibuffer-maps
+    "C-j"    #'next-line
+    "C-k"    #'previous-line)
+  (define-key! read-expression-map
+    "C-j" #'next-line-or-history-element
+    "C-k" #'previous-line-or-history-element))
+
+#+end_src
+
+*** Smart Tab
+#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+;; Smart tab, these will only work in GUI Emacs
+(map! :i [tab] (cmds! (and (modulep! :editor snippets)
+                           (yas-maybe-expand-abbrev-key-filter 'yas-expand))
+                      #'yas-expand
+                      (and (bound-and-true-p company-mode)
+                           (modulep! :completion company +tng))
+                      #'company-indent-or-complete-common)
+      :m [tab] (cmds! (and (modulep! :editor snippets)
+                           (evil-visual-state-p)
+                           (or (eq evil-visual-selection 'line)
+                               (not (memq (char-after) (list ?\( ?\[ ?\{ ?\} ?\] ?\))))))
+                      #'yas-insert-snippet
+                      (and (modulep! :editor fold)
+                           (save-excursion (end-of-line) (invisible-p (point))))
+                      #'+fold/toggle
+                      ;; Fixes #4548: without this, this tab keybind overrides
+                      ;; mode-local ones for modes that don't have an evil
+                      ;; keybinding scheme or users who don't have :editor (evil
+                      ;; +everywhere) enabled.
+                      (or (doom-lookup-key
+                           [tab]
+                           (list (evil-get-auxiliary-keymap (current-local-map) evil-state)
+                                 (current-local-map)))
+                          (doom-lookup-key
+                           (kbd "TAB")
+                           (list (evil-get-auxiliary-keymap (current-local-map) evil-state)))
+                          (doom-lookup-key (kbd "TAB") (list (current-local-map))))
+                      it
+                      (fboundp 'evil-jump-item)
+                      #'evil-jump-item))
+#+end_src
+
 ** Navigation
 *** Windows
 #+begin_src emacs-lisp :tangle config.el
@@ -585,7 +681,7 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 #+end_src
 
 *** Workspaces
-#+begin_src emacs-lisp :tangle keybinds.el :lexical t
+#+begin_src emacs-lisp :tangle keymaps.el :lexical t
 (map! (:when (modulep! :ui workspaces)
         :n "C-t"   #'+workspace/new
         :n "C-S-t" #'+workspace/display
@@ -640,7 +736,7 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 #+end_src
 
 *** Buffers
-#+begin_src emacs-lisp :tangle keybinds.el :lexical t
+#+begin_src emacs-lisp :tangle keymaps.el :lexical t
       ;;; <leader> b --- buffer
 (map! (:leader :prefix ("b" . "buffer")
        :desc "Toggle narrowing"            "-"   #'doom/toggle-narrow-buffer
@@ -677,7 +773,7 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 #+end_src
 
 *** Files
-#+begin_src emacs-lisp :tangle keybinds.el :lexical t
+#+begin_src emacs-lisp :tangle keymaps.el :lexical t
       ;;; <leader> f --- file
 (map! (:leader :prefix ("f" . "file")
     :desc "Create File"                 "c"   #'dired-create-empty-file
@@ -703,7 +799,7 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 #+end_src
 
 *** Projects
-#+begin_src emacs-lisp :tangle keybinds.el :lexical t
+#+begin_src emacs-lisp :tangle keymaps.el :lexical t
       ;;; <leader> p --- project
 (map! (:leader :prefix ("p" . "project")
        :desc "Browse project"               "." #'+default/browse-project
@@ -739,108 +835,8 @@ numbers are disabled. For relative line numbers, set this to `relative'.
         :desc "List project tasks"          "z" #'+taskrunner/project-tasks)))
 #+end_src
 
-#+begin_src emacs-lisp :tangle keybinds.el :lexical t
-(when (modulep! :editor evil +everywhere)
-  ;; NOTE SPC u replaces C-u as the universal argument.
-
-  ;; Minibuffer
-  (map! :map (evil-ex-completion-map evil-ex-search-keymap)
-        "C-a" #'evil-beginning-of-line
-        "C-b" #'evil-backward-char
-        "C-f" #'evil-forward-char
-        :gi "C-j" #'next-complete-history-element
-        :gi "C-k" #'previous-complete-history-element)
-
-  (define-key! :keymaps +default-minibuffer-maps
-    [escape] #'abort-recursive-edit
-    "C-a"    #'move-beginning-of-line
-    "C-r"    #'evil-paste-from-register
-    "C-u"    #'evil-delete-back-to-indentation
-    "C-v"    #'yank
-    "C-w"    #'doom/delete-backward-word
-    "C-z"    (cmd! (ignore-errors (call-interactively #'undo))))
-
-  (define-key! :keymaps +default-minibuffer-maps
-    "C-j"    #'next-line
-    "C-k"    #'previous-line
-    "C-S-j"  #'scroll-up-command
-    "C-S-k"  #'scroll-down-command)
-  ;; For folks with `evil-collection-setup-minibuffer' enabled
-  (define-key! :states 'insert :keymaps +default-minibuffer-maps
-    "C-j"    #'next-line
-    "C-k"    #'previous-line)
-  (define-key! read-expression-map
-    "C-j" #'next-line-or-history-element
-    "C-k" #'previous-line-or-history-element))
-
-
-;;
-;;; Global keybindings
-
-;; Smart tab, these will only work in GUI Emacs
-(map! :i [tab] (cmds! (and (modulep! :editor snippets)
-                           (yas-maybe-expand-abbrev-key-filter 'yas-expand))
-                      #'yas-expand
-                      (and (bound-and-true-p company-mode)
-                           (modulep! :completion company +tng))
-                      #'company-indent-or-complete-common)
-      :m [tab] (cmds! (and (modulep! :editor snippets)
-                           (evil-visual-state-p)
-                           (or (eq evil-visual-selection 'line)
-                               (not (memq (char-after) (list ?\( ?\[ ?\{ ?\} ?\] ?\))))))
-                      #'yas-insert-snippet
-                      (and (modulep! :editor fold)
-                           (save-excursion (end-of-line) (invisible-p (point))))
-                      #'+fold/toggle
-                      ;; Fixes #4548: without this, this tab keybind overrides
-                      ;; mode-local ones for modes that don't have an evil
-                      ;; keybinding scheme or users who don't have :editor (evil
-                      ;; +everywhere) enabled.
-                      (or (doom-lookup-key
-                           [tab]
-                           (list (evil-get-auxiliary-keymap (current-local-map) evil-state)
-                                 (current-local-map)))
-                          (doom-lookup-key
-                           (kbd "TAB")
-                           (list (evil-get-auxiliary-keymap (current-local-map) evil-state)))
-                          (doom-lookup-key (kbd "TAB") (list (current-local-map))))
-                      it
-                      (fboundp 'evil-jump-item)
-                      #'evil-jump-item))
-#+end_src
-
-** Help
-#+begin_src emacs-lisp :tangle keybinds.el :lexical t
-      (map!
-        (:after help :map help-mode-map
-                :n "o"       #'link-hint-open-link)
-        (:after helpful :map helpful-mode-map
-                :n "o"       #'link-hint-open-link)
-        (:after info :map Info-mode-map
-                :n "o"       #'link-hint-open-link)
-        (:after geiser-doc :map geiser-doc-mode-map
-                :n "o"       #'link-hint-open-link)
-        (:after apropos :map apropos-mode-map
-                :n "o"       #'link-hint-open-link
-                :n "TAB"     #'forward-button
-                :n [tab]     #'forward-button
-                :n [backtab] #'backward-button)
-        (:after view :map view-mode-map
-                [escape]  #'View-quit-all)
-        (:after man :map Man-mode-map
-                :n "q"    #'kill-current-buffer))
-#+end_src
-
-
-#+begin_src emacs-lisp :tangle keybinds.el :lexical t
-#+end_src
-
 ** Completion
-#+begin_src emacs-lisp :tangle keybinds.el :lexical t
-;; (map! :leader
-;;       :prefix ("l"."Language Models")
-;;       :desc "Code Completion"         :n "<tab>" #'codeium-completion-at-point)
-
+#+begin_src emacs-lisp :tangle keymaps.el :lexical t
 (map! (:when (modulep! :completion company)
         :i "C-@"    (cmds! (not (minibufferp)) #'company-complete-common)
         :i "C-SPC"  (cmds! (not (minibufferp)) #'company-complete-common)
@@ -922,7 +918,7 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 #+end_src
 
 ** UI
-#+begin_src emacs-lisp :tangle keybinds.el :lexical t
+#+begin_src emacs-lisp :tangle keymaps.el :lexical t
 (map!
         ;; misc
         :n "C-S-f"  #'toggle-frame-fullscreen
@@ -934,15 +930,15 @@ numbers are disabled. For relative line numbers, set this to `relative'.
         :n "M-C-="  #'doom/increase-font-size
         :n "M-C--"  #'doom/decrease-font-size
         (:when (modulep! :ui popup)
-            "C-` "   #'+popup/toggle
-          :leader :prefix ("-" "Popup")
-            "-"   #'+popup/toggle
-            "k"   #'+popup/raise
-            "j"   #'+popup/buffer
-            "d"   #'+popup/close
-            "D"   #'+popup/close-all
-            "r"   #'+popup/restore
-            "o" #'+popup/other)
+                "C-` "   #'+popup/toggle
+                :leader :prefix ("-" "Popup")
+                "-"   #'+popup/toggle
+                "k"   #'+popup/raise
+                "j"   #'+popup/buffer
+                "d"   #'+popup/close
+                "D"   #'+popup/close-all
+                "r"   #'+popup/restore
+                "o" #'+popup/other)
 
     (:leader :prefix ("t" . "Toggle")
         :desc "Big mode"                     "b" #'doom-big-font-mode
@@ -991,82 +987,65 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 #+end_src
 
 ** Editor
-#+begin_src emacs-lisp :tangle keybinds.el :lexical t
+#+begin_src emacs-lisp :tangle keymaps.el :lexical t
 (map!
  (:when (modulep! :editor format)
-   :n "gQ" #'+format:region)
-
- (:n "zC" #'+fold/close-all)
- (:n "zO" #'+fold/open-all)
- (:n "zr" #'vimish-fold-unfold-all)
- (:n "zm" #'vimish-fold-refold-all)
- (:n "zA" #'vimish-fold-toggle-all)
- (:n "gy" #'yank-from-kill-ring)
+  :n "gQ" #'+format:region
+  :n "zC" #'+fold/close-all
+  :n "zO" #'+fold/open-all
+  :n "zr" #'vimish-fold-unfold-all
+  :n "zm" #'vimish-fold-refold-all
+  :n "zA" #'vimish-fold-toggle-all
+  :n "gy" #'yank-from-kill-ring)
 
  (:when (modulep! :editor rotate-text)
-   :n "]r"  #'rotate-text
-   :n "[r"  #'rotate-text-backward)
+  :n "]r"  #'rotate-text
+  :n "[r"  #'rotate-text-backward)
 
  (:when (modulep! :editor snippets)
-   ;; auto-yasnippet
-   :i  [C-tab] #'aya-expand
-   :nv [C-tab] #'aya-create)
- (:map code-review-mode-map
-       (:n "]]" #'code-review-comment-jump-next)
-       (:n "[[" #'code-review-comment-jump-previous)
-       (:localleader
-              (:n "m" #'code-review-transient-api)
-              (:n "c" #'code-review-comment-add-or-edit)
-              (:n "t" #'code-review-github-repo)
-              (:n "s" #'code-review-comment-code-suggestion)
-        (:prefix ("S". "Set")
-                (:n "t" #'code-review-set-title)
-                (:n "d" #'code-review-set-description)
-                (:n "l" #'code-review-set-label)
-                (:n "a" #'code-review-set-assignee)
-                (:n "A" #'code-review-set-yourself-assignee)
-                (:n "f" #'code-review-set-feedback)))))
+  ;; auto-yasnippet
+  :i  [C-tab] #'aya-expand
+  :nv [C-tab] #'aya-create))
 #+end_src
 *** Multi-Cursors
-#+begin_src emacs-lisp :tangle keybinds.el :lexical t
-      (map! (:when (modulep! :editor multiple-cursors)
-              ;; evil-multiedit
-               :v  "R"     #'evil-multiedit-match-all
-               :n  "M-d"   #'evil-multiedit-match-symbol-and-next
-               :n  "M-D"   #'evil-multiedit-match-symbol-and-prev
-               :v  "M-d"   #'evil-multiedit-match-and-next
-               :v  "M-D"   #'evil-multiedit-match-and-prev
-               :nv "C-M-d" #'evil-multiedit-restore
-               (:after evil-multiedit
-                (:map evil-multiedit-mode-map
-                 :nv "M-d" #'evil-multiedit-match-and-next
-                 :nv "M-D" #'evil-multiedit-match-and-prev
-                 [return]  #'evil-multiedit-toggle-or-restrict-region))
-               (:prefix "gz"
-                :nv "d" #'evil-mc-make-and-goto-next-match
-                :nv "D" #'evil-mc-make-and-goto-prev-match
-                :nv "s" #'evil-mc-skip-and-goto-next-match
-                :nv "S" #'evil-mc-skip-and-goto-prev-match
-                :nv "c" #'evil-mc-skip-and-goto-next-cursor
-                :nv "C" #'evil-mc-skip-and-goto-prev-cursor
-                :nv "j" #'evil-mc-make-cursor-move-next-line
-                :nv "k" #'evil-mc-make-cursor-move-prev-line
-                :nv "m" #'evil-mc-make-all-cursors
-                :nv "n" #'evil-mc-make-and-goto-next-cursor
-                :nv "N" #'evil-mc-make-and-goto-last-cursor
-                :nv "p" #'evil-mc-make-and-goto-prev-cursor
-                :nv "P" #'evil-mc-make-and-goto-first-cursor
-                :nv "q" #'evil-mc-undo-all-cursors
-                :nv "t" #'+multiple-cursors/evil-mc-toggle-cursors
-                :nv "u" #'+multiple-cursors/evil-mc-undo-cursor
-                :nv "z" #'+multiple-cursors/evil-mc-toggle-cursor-here
-                :v  "I" #'evil-mc-make-cursor-in-visual-selection-beg
-                :v  "A" #'evil-mc-make-cursor-in-visual-selection-end)))
-
+#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+(map! (:when (modulep! :editor multiple-cursors)
+       ;; evil-multiedit
+       :v  "R"               #'evil-multiedit-match-all
+       :n  "M-d"              #'evil-multiedit-match-symbol-and-next
+       :n  "M-D"              #'evil-multiedit-match-symbol-and-prev
+       :v  "M-d"              #'evil-multiedit-match-and-next
+       :v  "M-D"              #'evil-multiedit-match-and-prev
+       :nv "C-M-d"            #'evil-multiedit-restore
+       (:after evil-multiedit
+        :map evil-multiedit-mode-map
+        :nv "M-d"             #'evil-multiedit-match-and-next
+        :nv "M-D"             #'evil-multiedit-match-and-prev
+        [return]              #'evil-multiedit-toggle-or-restrict-region)
+       (:prefix "gz"
+        :nv "d"               #'evil-mc-make-and-goto-next-match
+        :nv "D"               #'evil-mc-make-and-goto-prev-match
+        :nv "s"               #'evil-mc-skip-and-goto-next-match
+        :nv "S"               #'evil-mc-skip-and-goto-prev-match
+        :nv "c"               #'evil-mc-skip-and-goto-next-cursor
+        :nv "C"               #'evil-mc-skip-and-goto-prev-cursor
+        :nv "j"               #'evil-mc-make-cursor-move-next-line
+        :nv "k"               #'evil-mc-make-cursor-move-prev-line
+        :nv "m"               #'evil-mc-make-all-cursors
+        :nv "n"               #'evil-mc-make-and-goto-next-cursor
+        :nv "N"               #'evil-mc-make-and-goto-last-cursor
+        :nv "p"               #'evil-mc-make-and-goto-prev-cursor
+        :nv "P"               #'evil-mc-make-and-goto-first-cursor
+        :nv "q"               #'evil-mc-undo-all-cursors
+        :nv "t"               #'+multiple-cursors/evil-mc-toggle-cursors
+        :nv "u"               #'+multiple-cursors/evil-mc-undo-cursor
+        :nv "z"               #'+multiple-cursors/evil-mc-toggle-cursor-here
+        :v  "I"               #'evil-mc-make-cursor-in-visual-selection-beg
+        :v  "A"               #'evil-mc-make-cursor-in-visual-selection-end)))
 #+end_src
 
 ** Tools
-#+begin_src emacs-lisp :tangle keybinds.el :lexical t
+#+begin_src emacs-lisp :tangle keymaps.el :lexical t
 ;;; <leader> l --- live share/collab
 ;;; TODO Do you like this location for this map? This was the best idea we
 ;;; could come up with, but we're happy to move it if there's a better
@@ -1075,22 +1054,22 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 (map!
  (:after printing (:desc "Print" "s-p"   #'pr-interface))
  (:when (modulep! :tools collab) (:prefix ("l" . "live share/collab")
-                                  :desc "Switch to a shared buffer"      "b"   #'crdt-switch-to-buffer
-                                  :desc "Connect to a session"           "c"   #'crdt-connect
-                                  :desc "Disconnect from session"        "d"   #'crdt-disconnect
-                                  :desc "Toggle following user's cursor" "f"   #'crdt-follow-user
-                                  :desc "Stop following user if any"     "F"   #'crdt-stop-follow
-                                  :desc "Goto another user's cursor"     "g"   #'crdt-goto-user
-                                  :desc "List shared buffers"            "i"   #'crdt-list-buffers
-                                  :desc "Kick a user (host only)"        "k"   #'crdt-kill-user
-                                  :desc "List sessions"                  "l"   #'crdt-list-sessions
-                                  :desc "Share current buffer"           "s"   #'crdt-share-buffer
-                                  :desc "Stop sharing current buffer"    "S"   #'crdt-stop-share-buffer
-                                  :desc "List connected users"           "u"   #'crdt-list-users
-                                  :desc "Stop a session (host only)"     "x"   #'crdt-stop-session
-                                  :desc "Copy URL of current session"    "y"   #'crdt-copy-url
-                                  :desc "Goto next user's cursor"        "]"   #'crdt-goto-next-user
-                                  :desc "Goto previous user's cursor"    "["   #'crdt-goto-prev-user))
+  :desc "Switch to a shared buffer"      "b"   #'crdt-switch-to-buffer
+  :desc "Connect to a session"           "c"   #'crdt-connect
+  :desc "Disconnect from session"        "d"   #'crdt-disconnect
+  :desc "Toggle following user's cursor" "f"   #'crdt-follow-user
+  :desc "Stop following user if any"     "F"   #'crdt-stop-follow
+  :desc "Goto another user's cursor"     "g"   #'crdt-goto-user
+  :desc "List shared buffers"            "i"   #'crdt-list-buffers
+  :desc "Kick a user (host only)"        "k"   #'crdt-kill-user
+  :desc "List sessions"                  "l"   #'crdt-list-sessions
+  :desc "Share current buffer"           "s"   #'crdt-share-buffer
+  :desc "Stop sharing current buffer"    "S"   #'crdt-stop-share-buffer
+  :desc "List connected users"           "u"   #'crdt-list-users
+  :desc "Stop a session (host only)"     "x"   #'crdt-stop-session
+  :desc "Copy URL of current session"    "y"   #'crdt-copy-url
+  :desc "Goto next user's cursor"        "]"   #'crdt-goto-next-user
+  :desc "Goto previous user's cursor"    "["   #'crdt-goto-prev-user))
 
     ;;; <leader> o --- open
  (:leader :prefix ("o" . "open")
@@ -1104,85 +1083,101 @@ numbers are disabled. For relative line numbers, set this to `relative'.
   :desc "Dired"              "-"  #'dired-jump
   :desc "Calc"              "c"  #'calc
   :desc "Org agenda"       "A"  #'org-agenda
+
   (:prefix ("a" . "org agenda2000")
    :desc "Agenda"         "a"  #'org-agenda
    :desc "Todo list"      "t"  #'org-todo-list
    :desc "Tags search"    "m"  #'org-tags-view
    :desc "View search"    "v"  #'org-search-view)
+
   (:when (modulep! :tools pass)
     :desc "Pass"           "k" #'pass)
-  (:when (modulep! :tools pass)
-    :desc "Pass"           "k" #'pass)
+
   (:when (modulep! :ui neotree)
     :desc "Project sidebar"              "p" #'+neotree/open
     :desc "Find file in project sidebar" "P" #'+neotree/find-this-file)
+
   (:when (modulep! :ui treemacs)
     :desc "Project sidebar" "p" #'+treemacs/toggle
     :desc "Find file in project sidebar" "P" #'treemacs-find-file)
+
   (:when (modulep! :term shell)
     :desc "Toggle shell popup"    "t" #'+shell/toggle
     :desc "Open shell here"       "T" #'+shell/here)
+
   (:when (modulep! :term term)
     :desc "Toggle terminal popup" "t" #'+term/toggle
     :desc "Open terminal here"    "T" #'+term/here)
+
   (:when (modulep! :term vterm)
     :desc "Toggle vterm popup"    "t" #'+vterm/toggle
     :desc "Open vterm here"       "T" #'+vterm/here)
+
   (:when (modulep! :term eshell)
     :desc "Toggle eshell popup"   "e" #'+eshell/toggle
     :desc "Open eshell here"      "E" #'+eshell/here)
+
   (:when (modulep! :os macos)
     :desc "Reveal in Finder"           "o" #'+macos/reveal-in-finder
     :desc "Reveal project in Finder"   "O" #'+macos/reveal-project-in-finder)
+
   (:when (modulep! :tools docker)
     :desc "Docker" "D" #'docker)
+
   (:when (modulep! :app calendar)
     :desc "Calendar" "C" #'=calendar)
+
   (:when (modulep! :app irc)
     :desc "IRC" "i" #'=irc)
+
   (:when (modulep! :app rss)
     :desc "RSS" "f" #'=rss)
+
   (:when (modulep! :email mu4e)
     :desc "Mu4e" "m" #'=mu4e
     :desc "Mu4e Compose" "M" #'+mu4e/compose)
+
   (:when (modulep! :email notmuch)
     :desc "notmuch" "m" #'=notmuch)
+
   (:after spray
    :desc "Spray" "s" #'spray-mode)
-  (:when (modulep! :email wanderlust)
-    :desc "wanderlust" "m" #'=wanderlust))
 
- (:leader :prefix ("e" . "AI")
-          (:after copilot
-           :desc "Complete" "<tab>" #'copilot-mode)
-          (:when (require 'ellama)
-           :desc "Chat" "e" #'ellama-chat
-           :desc "Change" "C" #'ellama-change
-           :desc "Provider Selection" "p" #'ellama-provider-select
-           :desc "Define Word" "d" #'ellama-define-word
-           :desc "Send Region/Buffer to chat" :nv "E" #'ellama-ask-selection
-           :desc "Ask About Region/Buffer"   :nv "a" #'ellama-ask-about
-           :desc "Summarize Region/Buffer"   :nv "S" #'ellama-summarize
-           (:prefix ("s" . "session")
-            :desc "Switch" "s" #'ellama-session-switch
-            :desc "Load" "l" #'ellama-load-session
-            :desc "Remove" "R" #'ellama-session-remove
-            :desc "Rename" "r" #'ellama-session-rename)
-           (:prefix ("i" . "improve")
-            :desc "Grammar" "g" #'ellama-improve-grammar
-            :desc "Wording" "w" #'ellama-improve-wording
-            :desc "Conciseness" "c" #'ellama-improve-conciseness)
-           (:prefix ("c" . "code")
-            :desc "Complete" "<tab>" #'ellama-code-complete
-            :desc "Improve" "i" #'ellama-code-improve
-            :desc "Review" "r" #'ellama-code-review
-            :desc "Edit" "e" #'ellama-code-edit
-            :desc "Add" "a" #'ellama-code-add))
-          (:when (require 'whisper)
-           :desc "Whisper" "w" #'whisper-run))
+  (:when (modulep! :email wanderlust)
+    :desc "wanderlust" "m" #'=wanderlust)))
+
+ (map! :leader
+       :prefix ("l"."Language Models")
+       (:after copilot
+        :desc "Complete" "<tab>" #'copilot-mode)
+       (:after whisper
+        :desc "Whisper" "w" #'whisper-run)
+       (:after ellama
+        :desc "Chat" "e" #'ellama-chat
+        :desc "Change" "C" #'ellama-change
+        :desc "Provider Selection" "p" #'ellama-provider-select
+        :desc "Define Word" "d" #'ellama-define-word
+        :desc "Send Region/Buffer to chat" :nv "E" #'ellama-ask-selection
+        :desc "Ask About Region/Buffer"   :nv "a" #'ellama-ask-about
+        :desc "Summarize Region/Buffer"   :nv "S" #'ellama-summarize
+        (:prefix ("s" . "session")
+         :desc "Switch" "s" #'ellama-session-switch
+         :desc "Load" "l" #'ellama-load-session
+         :desc "Remove" "R" #'ellama-session-remove
+         :desc "Rename" "r" #'ellama-session-rename)
+        (:prefix ("i" . "improve")
+         :desc "Grammar" "g" #'ellama-improve-grammar
+         :desc "Wording" "w" #'ellama-improve-wording
+         :desc "Conciseness" "c" #'ellama-improve-conciseness)
+        (:prefix ("c" . "code")
+         :desc "Complete" "<tab>" #'ellama-code-complete
+         :desc "Improve" "i" #'ellama-code-improve
+         :desc "Review" "r" #'ellama-code-review
+         :desc "Edit" "e" #'ellama-code-edit
+         :desc "Add" "a" #'ellama-code-add)))
 
     ;;; <leader> r --- remote
- (:when (modulep! :tools upload) (:leader :prefix ("r" . "remote")
+ (map! (:when (modulep! :tools upload) (:leader :prefix ("r" . "remote")
                                   :desc "Browse remote"              "b" #'ssh-deploy-browse-remote-base-handler
                                   :desc "Browse relative"            "B" #'ssh-deploy-browse-remote-handler
                                   :desc "Download remote"            "d" #'ssh-deploy-download-handler
@@ -1270,7 +1265,7 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 #+RESULTS:
 
 ** Other
-#+begin_src emacs-lisp :tangle keybinds.el :lexical t
+#+begin_src emacs-lisp :tangle keymaps.el :lexical t
 (map! :when (modulep! :tools eval) "M-r" #'+eval/buffer)
 (map! :leader
       :desc "Eval expression"       ";"    #'pp-eval-expression
@@ -1327,7 +1322,7 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 
 ** Programming
 *** Code
-#+begin_src emacs-lisp :tangle keybinds.el :lexical t
+#+begin_src emacs-lisp :tangle keymaps.el :lexical t
     (map! (:leader :prefix ("c" . "code")
             :desc "Compile"                               "c"   #'compile
             :desc "Recompile"                             "C"   #'recompile
@@ -1382,7 +1377,7 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 #+end_src
 
 *** Git
-#+begin_src emacs-lisp :tangle keybinds.el :lexical t
+#+begin_src emacs-lisp :tangle keymaps.el :lexical t
       ;;; <leader> g --- git/version control
   (map! :leader :prefix ("g" . "git")
        :desc "Revert file"                 "R"   #'vc-revert
@@ -1445,7 +1440,7 @@ numbers are disabled. For relative line numbers, set this to `relative'.
                 :desc "Pull request"              "p"   #'forge-create-pullreq)))
 #+end_src
 ** Notes
-#+begin_src emacs-lisp :tangle keybinds.el :lexical t
+#+begin_src emacs-lisp :tangle keymaps.el :lexical t
       ;;; <leader> n --- notes
 (map! (:unless (modulep! :input layout +bepo)
         (:after (evil-org evil-easymotion)
@@ -1455,8 +1450,7 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 (map!
 
   (:leader
-        :desc "Capture to Today"            "x"   #'org-roam-dailies-capture-today
-        :desc "Capture"             "X"   #'org-capture)
+        :desc "Capture"             "x"   #'org-capture)
 
  (:map org-mode-map
   :desc "Move to Next Visible Heading"      :n "] h" #'org-next-visible-heading
@@ -1476,7 +1470,7 @@ numbers are disabled. For relative line numbers, set this to `relative'.
   :desc "Goto Clock"           :n "g" #'org-clock-goto
   :desc "Cancel Clock"         :n "c" #'org-clock-cancel
   :desc "Evaluate Time Range"  :n "e" #'org-evaluate-time-range
-  :desc "Clock Jumplist"       :n "\\" #'org-clock-jumplist)
+  :desc "Clock Jumplist"       :n "\\" #'my/org-clock-jumplist)
  (:leader :prefix ("n" . "notes")
   :desc "Find file in notes"           "f" #'+default/find-in-notes
   :desc "Browse notes"                 "F" #'+default/browse-notes
@@ -1497,6 +1491,8 @@ numbers are disabled. For relative line numbers, set this to `relative'.
   :desc "Org agenda"                   "a" #'org-agenda
   :desc "Toggle last org-clock"        "c" #'+org/toggle-last-clock
   :desc "Cancel current org-clock"     "C" #'org-clock-cancel
+  (:after org-roam-ql
+   :desc "Query Nodes"     "q" #'org-roam-ql-search)
   (:prefix  ("d" . "date")
    :desc "Deadline"                       :n "d" #'org-deadline
    :desc "Schedule"                       :n "s" #'org-schedule
@@ -1551,7 +1547,7 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 #+end_src
 
 ** No Idea
-#+begin_src emacs-lisp :tangle keybinds.el :lexical t
+#+begin_src emacs-lisp :tangle keymaps.el :lexical t
 (after! which-key
   (let ((prefix-re (regexp-opt (list doom-leader-key doom-leader-alt-key))))
     (cl-pushnew `((,(format "\\`\\(?:C-w\\|%s w\\) m\\'" prefix-re))
@@ -1931,7 +1927,7 @@ Consider adding this file to your list of agenda files so that events show up th
 (package! sql-indent)
 #+end_src
 
-#+begin_src emacs-lisp :tangle keybinds.el
+#+begin_src emacs-lisp :tangle keymaps.el
 (map!
     :map sql-mode-map
     :localleader
