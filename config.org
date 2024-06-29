@@ -1960,83 +1960,159 @@ Consider adding this file to your list of agenda files so that events show up th
 ** Org
 #+begin_src emacs-lisp :tangle config.el
 (after! org
-        (setq org-startup-with-latex-preview 't)
-        (setq org-startup-with-inline-images 't)
-        (setq org-todo-keywords '((sequence "REVIEW(r)" "TODO(t)" "HOLD(h)" "LOOP(l)" "|" "DONE(d)" "KILL(k)")
-                                  (sequence "EVENT(e)" "NOTE(n)" "PROJ(p)" "|")))
-        (defun my/update-reviewed ()
-                (interactive "*")
-                (org-set-property "REVIEWED" (format-time-string "%Y-%m-%d %H:%M:%S")))
+ (defconst seconds-in-day 86400)
 
-        (defun my/transform-title ()
-                "Take a title for an org mode note as a heading and turn it into a title"
-                (interactive "*")
-                (beginning-of-buffer)
-                (org-toggle-heading)
-                (beginning-of-line)
-                (insert "#+title:"))
+ (defvar org-weekly-head
+   (concat "#+title:" (format-time-string "%Y-W%W") "\n")
+   "Contents appended to the head of a weekly capture file")
 
-        (defun org-clock-jumplist ()
-          "Opens a buffer for you to decide which clock to go to"
-          (interactive)
-          (org-clock-goto 'select))
+ (defvar review-length-days 90
+  "Number of days between full reviews of all nodes in org-roam database.")
 
-        (defun my/org-add-note ()
-          (interactive)
-          (org-fold-show-entry)
-          (let ((position (- (org-entry-end-position) 1)))
-               (goto-char position)
-               (let* ((org_list (org-list-struct))
-                      (prevs (org-list-prevs-alist org_list)))
-                 (if (eq org_list 'nil) (progn
-                                          (newline-and-indent)
-                                          (insert "- Note taken on "))
-                                        (org-list-insert-item position org_list prevs 'nil "Note taken on "))
-                 (org-end-of-line)
-                 (org-time-stamp-inactive '(16))
-                 (newline-and-indent)
-                 (evil-insert 1))))
+ (defvar org-agenda-directory (expand-file-name "agenda/" org-directory)
+   "The Primary Directory in which to place agenda files")
 
-        (defun my/org-time-stamp-inactive-with-time ()
-          (interactive)
-          (org-time-stamp-inactive 't))
+ (defvar org-weekly-directory (expand-file-name "weekly/" org-agenda-directory)
+   "The Directory in which to place weekly agenda files")
 
-        (defun my/org-time-stamp-with-time ()
-          (interactive)
-          (org-time-stamp 't))
+ (defun my/org-reviewed-recently (node)
+  "A function that returns wether of not a node needs to be reviewed"
+   (unless (not (org-roam-node-p node))
+       (progn (let ((review_prop (-filter (lambda (prop) (string= (car prop) "REVIEWED"))
+                                  (org-roam-node-properties node))))
+               (unless (eq review_prop 'nil)
+                 (let ((review_date (cdr (car review_prop)))
+                       (recent (format-time-string "%Y-%m-%d" (time-subtract 'nil (* seconds-in-day review-length-days)))))
+                    (org-time< recent review_date)))))))
 
-        (add-hook #'org-mode-hook #'evil-tex-mode)
-        (add-hook #'before-save-hook #'org-update-all-dblocks)
-        (add-hook #'auto-save-hook #'org-save-all-org-buffers)
-        (add-hook #'org-clock-in-hook #'org-save-all-org-buffers)
-        (add-hook #'org-clock-out-hook #'org-save-all-org-buffers)
-        ;; (require 'org-attach-git)
-        ;; (defcustom org-file-exclude-regexp '(org-attach-id-dir) "Files matching these regular expressions will be excluded from org roam")
+ (defun my/org-clock-jumplist ()
+   "Opens a buffer for you to decide which clock to go to"
+   (interactive)
+   (org-clock-goto 'select))
+
+ (defun my/org-add-note ()
+   (interactive)
+   (org-fold-show-entry)
+   (let ((position (- (org-entry-end-position) 1)))
+     (goto-char position)
+     (let* ((org_list (org-list-struct))
+            (prevs (org-list-prevs-alist org_list)))
+       (if (eq org_list 'nil) (progn
+                                (newline-and-indent)
+                                (insert "- Note taken on "))
+         (org-list-insert-item position org_list prevs 'nil "Note taken on "))
+       (org-end-of-line)
+       (org-time-stamp-inactive '(16))
+       (newline-and-indent)
+       (evil-insert 1))))
+
+ (defun my/org-time-stamp-inactive-with-time ()
+   (interactive)
+   (org-time-stamp-inactive 't))
+
+ (defun my/org-time-stamp-with-time ()
+   (interactive)
+   (org-time-stamp 't))
+
+ (defun my/update-reviewed ()
+   (interactive "*")
+   (org-set-property "REVIEWED" (format-time-string "%Y-%m-%d %H:%M:%S")))
+
+ (defun my/org-capture-add-created ()
+   (interactive)
+   (org-set-property "CREATED" (org-timestamp-translate (org-timestamp-from-time (current-time) 't 't))))
 
 
-        (setq
-                org-attach-auto-tag nil
-                org-startup-folded 'fold
-                org-directory (file-truename "~/org/")
-                +org-capture-central-project-todo-file "journal/projects.org"
-                +org-capture-central-project-changelog-file "journal/projects.org"
-                +org-capture-central-project-notes-file "journal/projects.org"
-                org-plantuml-jar-path  "/usr/local/Cellar/plantuml/1.2023.13/libexec/plantuml.jar"
-                org-agenda-files (list (concat org-directory "journal/"))
-                org-archive-location (concat org-directory "archive/%s_archive::datetree/")
-                org-log-done 'time)
-                ; org-attach-git-dir org-directory
-        (setq org-file-exclude-regexp
-         (append (mapcar #'(lambda (x) (file-truename (expand-file-name x org-directory))) '(".Trash/" "data/" "logsec/")) (list org-attach-id-dir)))
+ (defun capture-week-file ()
+   "Return the filename of the current capture week file creating it if it doesn't exist"
+   (let ((filename
+          (expand-file-name (format-time-string "%Y-W%W.org") org-weekly-directory)))
+        ;;(unless (f-exists? filename) (append-to-file org-weekly-head nil filename))
+        filename))
 
-        (setq org-capture-templates
-                (list
-                        '("t" "Project-local todo" entry (file+headline +org-capture-project-todo-file "Inbox") "* TODO %?\n%i\n%a"
-                                :unnarrowed t)
-                        '("n" "Project-local notes" entry (file+headline +org-capture-project-notes-file "Inbox") "* %U %?\n%i\n%a"
-                                :unnarrowed t)
-                        '("c" "Project-local changelog" entry (file+headline +org-capture-project-changelog-file "Unreleased") "* %U %?\n%i\n%a"
-                                :unnarrowed t))))
+ (defun quick-capture ()
+   (let* ((scheduled (when (y-or-n-p "Scheduled?")
+                               (concat ":SCHEDULED:" (org-timestamp-translate  (org-timestamp-from-time (org-read-date 'nil 't))))))
+         (deadline (when (y-or-n-p "Deadline?")
+                             (concat ":DEADLINE:" (org-timestamp-translate  (org-timestamp-from-time (org-read-date 'nil 't))))))
+             (newline (when (or deadline scheduled) "\n")))
+        (concat "* %i%? :Inbox:\n" scheduled deadline newline)))
+
+ (defun my/org-todo ()
+   (when (y-or-n-p "Edit Todo State?") (org-todo)))
+
+ (defun my/org-set-tags ()
+   (when (y-or-n-p "Edit tags?") (org-set-tags-command)))
+
+
+  (setq
+        org-attach-auto-tag nil
+        org-archive-location (concat org-directory "archive/%s_archive::datetree/")
+        org-directory (file-truename "~/org/")
+        org-agenda-files (list org-agenda-directory)
+        org-plantuml-jar-path  "/usr/local/Cellar/plantuml/1.2023.13/libexec/plantuml.jar"
+        org-log-done 'time)
+
+;; Edit settings
+  (setq
+        org-catch-invisible-edits 'show-and-error
+        org-special-ctrl-a/e t
+        org-insert-heading-respect-content t)
+
+
+;; Ellipsis styling
+ (set-face-attribute 'org-ellipsis nil :inherit 'default :box nil)
+
+;; Org styling, hide markup etc.
+ (setq
+        org-auto-align-tags t
+        org-tags-column 0
+        org-ellipsis "…"
+        org-cycle-inline-images-display 't
+        org-startup-with-latex-preview 't
+        org-startup-folded 't
+        org-hide-emphasis-markers t
+        org-pretty-entities t)
+
+
+ (add-hook! 'org-mode-hook #'org-modern-mode)
+ (add-hook! 'org-agenda-finalize-hook #'org-modern-agenda)
+ (add-hook! #'org-mode-hook #'evil-tex-mode)
+ (add-hook! #'before-save-hook #'org-update-all-dblocks)
+ (add-hook! #'auto-save-hook #'org-save-all-org-buffers)
+ (add-hook! #'org-clock-in-hook #'org-save-all-org-buffers)
+ (add-hook! #'org-clock-out-hook #'org-save-all-org-buffers)
+ (add-hook! 'org-capture-prepare-finalize-hook #'my/org-capture-add-created)
+     (add-hook! 'org-capture-prepare-finalize-hook #'my/org-todo)
+     (add-hook! 'org-capture-prepare-finalize-hook #'my/org-set-tags))
+
+ (setq
+        org-todo-keywords '((sequence "TODO(t)" "HOLD(h)" "|" "DONE(d)" "KILL(k)"))
+        org-todo-repeat-to-state 't
+        org-file-exclude-regexp
+        (append (mapcar #'(lambda (x) (file-truename (expand-file-name x org-directory))) '(".Trash/" "data/" "logsec/")) (list org-attach-id-dir)))
+
+ (setq org-capture-templates
+       '(("x" "Quick" entry
+          (file capture-week-file)
+          (function quick-capture))
+        ("r" "Review" entry
+         (file capture-week-file)
+         "* TODO Review %a%? :Inbox:Review:\n"
+         :immediate-finish 't)
+        ("n" "Current Task" entry
+          (file capture-week-file)
+          "* TODO %i%? \n"
+          :clock-in t)
+        ("p" "Project-local")
+        ("pt" "Project-local Todo" entry (file +org-capture-project-todo-file) "* TODO %? :Inbox:\n%i\n%a"
+          :unnarrowed t)
+        ("pn" "Project-local Notes" entry (file +org-capture-project-notes-file) "* %? :Inbox:\n%i\n%a"
+          :unnarrowed t)
+        ("pc" "Project-local Changelog" entry (file+headline +org-capture-project-changelog-file "Unreleased") "* %?\n%i\n%a"
+          :unnarrowed t)))
+
+
 #+end_src
 
 *** Org-agenda
@@ -2046,35 +2122,85 @@ Consider adding this file to your list of agenda files so that events show up th
     (interactive)
     (org-agenda nil "n"))
 
+  (setq org-super-agenda-header-map (make-sparse-keymap))
 
-  (map! :leader :desc "My Agenda" :n ";" #'my/org-agenda)
+  (defun my/org-agenda-id-get-create ()
+    (interactive)
+    (org-agenda-switch-to nil)
+    (org-id-get-create)
+    (evil-window-delete))
 
-   ;; This is here because I will forget how to do this
-   ;; (setq org-agenda-custom-commands
-   ;;     (tags-todo "+LEVEL=1+TODO=\"TODO\"" ((org-agenda-overriding-header "")
-   ;;                                          (org-agenda-todo-keyword-format ""))))
+
+  (map! (:leader :desc "My Agenda" :n ";" #'my/org-agenda)
+        (:map org-agenda-mode-map
+         :localleader
+         :desc "Add Id" :n "I" #'my/org-agenda-id-get-create))
+
   (setq
-   org-agenda-time-grid  '((daily today) (800 1000 1200 1400 1600 1800 2000) " " "---")
+   org-agenda-tags-column 0
+   org-agenda-span 1
+   org-deadline-warning-days 5
+   org-agenda-block-separator ?─
+   org-agenda-time-grid
+   '((daily today require-timed)
+     (800 1000 1200 1400 1600 1800 2000)
+     " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
+   org-agenda-current-time-string "◀── now ─────────────────────────────────────────────────"
+   org-agenda-inhibit-startup 'nil
    org-agenda-start-day 'nil
    org-agenda-custom-commands
+
    '(("n" "Today and TODOs"
       ((agenda "" ((org-agenda-overriding-header "")
                    (org-agenda-include-diary t)
                    (org-deadline-warning-days 7)
-                   (org-agenda-span 'day)))
-       (todo "TODO" ((org-agenda-overriding-header "")
-                     (org-agenda-sorting-strategy '(timestamp-up))
-                     (org-agenda-todo-keyword-format "")))
-       (todo "REVIEW" ((org-agenda-overriding-header "")
-                       (org-agenda-sorting-strategy '(timestamp-up))
-                       (org-agenda-todo-keyword-format "")))
-       (todo "NOTE" ((org-agenda-overriding-header "")
-                     (org-agenda-sorting-strategy '(timestamp-up))
-                     (org-agenda-todo-keyword-format "")))
-       (todo "HOLD" ((org-agenda-overriding-header "")
-                     (org-agenda-sorting-strategy '(timestamp-up))
-                     (org-agenda-todo-keyword-format "")))
-       ())))))
+                   (org-agenda-span 'day)
+                   (org-super-agenda-groups
+                          '((:name "Today"
+                                :time-grid t)
+                            (:name "Important"
+                                :priority "A")
+                            (:name "Personal"
+                                :habit t
+                                :and (
+                                      :not (:children todo)
+                                      :file-path ".*personal.*"))
+                            (:name "Projects"
+                                :file-path ".*project.*"
+                                :tag "Project"
+                                :order 3)
+                            (:auto-outline-path t
+                             :order 4)
+                            ))))
+
+       (alltodo "" ((org-super-agenda-groups
+                        '((:discard (:habit t :todo "DONE" :todo "KILL" :scheduled today :deadline today))
+                          (:name "Inbox"
+                                :todo "REVIEW"
+                                :file-path ".*inbox.*")
+                          (:name "Important"
+                                :priority "A")
+                          (:auto-parent t :order 100)
+                          (:name "HOLD" :and (:not (:tag "Project") :todo "HOLD") :order 5)
+                          (:name "Projects"
+                                :and (:not (:children todo)
+                                      :tag "Project")
+                                :transformer #'my/org-agenda-transform-project
+                                :order 10)
+                          (:name "Personal"
+                                :and (:not (:children todo)
+                                      :file-path ".*personal.*")
+                                :order 1)
+                          (:discard (:children todo))
+                          )))))
+       ()))))
+#+end_src
+**** Org Super Agenda
+#+begin_src emacs-lisp :tangle yes
+(after! org
+(add-to-list 'org-modules 'org-habit)
+(setq org-super-agenda-mode 't
+      org-habit-show-habits-only-for-today t))
 #+end_src
 *** Ox-hugo
 #+begin_src emacs-lisp :tangle yes
@@ -2245,9 +2371,9 @@ Consider adding this file to your list of agenda files so that events show up th
 
 (use-package! org-roam-ui
     :after org-roam ;; or :after org
-;;         normally we'd recommend hooking orui after org-roam, but since org-roam does not have
-;;         a hookable mode anymore, you're advised to pick something yourself
-;;         if you don't care about startup time, use
+;;  normally we'd recommend hooking orui after org-roam, but since org-roam does not have
+;;  a hookable mode anymore, you're advised to pick something yourself
+;;  if you don't care about startup time, use
 ;;  :hook (after-init . org-roam-ui-mode)
     :config
     (setq org-roam-ui-sync-theme t
@@ -2255,6 +2381,14 @@ Consider adding this file to your list of agenda files so that events show up th
           org-roam-ui-update-on-save t
           org-roam-ui-open-on-start t))
 #+end_src
+
+**** Org Roam ql
+#+begin_src emacs-lisp :tangle yes
+(after! org-roam-ql
+  (map! :map org-roam-ql-mode-map :desc "Query Dispatch" :n "q" #'org-roam-ql-buffer-dispatch)
+  )
+#+end_src
+
 *** TODO NotDeft
 #+begin_src emacs-lisp :tangle config.el
 ;; (after! deft
@@ -2300,4 +2434,9 @@ Consider adding this file to your list of agenda files so that events show up th
   ;; use the view command named "Zathura" for pdf output
   (setcdr (assq 'output-pdf TeX-view-program-selection) '("Zathura")))
 #+end_src
-
+** Elisp
+*** Parinfer
+While waiting for the library to work on x86 macOS
+#+begin_src emacs-lisp :tangle yes
+(setq parinfer-rust-library "~/.config/doom/lib/libparinfer_rust.dylib.so")
+#+end_src
