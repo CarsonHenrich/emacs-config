@@ -422,8 +422,7 @@ This is where packages not included in modules are placed to install them.
 (setq
         user-full-name "Carson Henrich"
         user-mail-address "carson03henrich@gmail.com"
-        display-time-format "%Y-%m-%d %H:%M"
-        initial-buffer-choice (lambda () (find-file (my/org-capture-week-file)) (current-buffer)))
+        display-time-format "%Y-%m-%d %H:%M")
 (display-time-mode 1)
 (auto-revert-mode 1)
 (toggle-text-mode-auto-fill)
@@ -2021,6 +2020,8 @@ Consider adding this file to your list of agenda files so that events show up th
           (expand-file-name (format-time-string "%Y-W%W.org") org-weekly-directory)))
         (unless (f-exists? filename) (f-touch filename))
         filename))
+
+(setq initial-buffer-choice (my/org-current-week-file))
 
  (defun my/org-capture-template-with-timestamps (TEMPLATE)
    "Returns a function that prepends timestamps given by the user to TEMPLATE"
