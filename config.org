@@ -400,7 +400,9 @@ This is where packages not included in modules are placed to install them.
 
 (unpin! org-roam)
 (package! org-roam-ui)
+(package! org-ql)
 (package! org-roam-ql)
+(package! org-roam-ql-ql)
 (package! org-modern)
 (package! org-present)
 (package! ox-hugo)
@@ -1448,102 +1450,104 @@ numbers are disabled. For relative line numbers, set this to `relative'.
          :m "gsh" #'+org/goto-visible)))
 
 (map!
+  (:leader :desc "Capture"             "x"   #'org-capture)
+  (:map org-mode-map
+   :desc "Move to Next Visible Heading"      :n "] h" #'org-next-visible-heading
+   :desc "Move to Previous Visible Heading"  :n "[ h" #'org-previous-visible-heading
+   (:localleader
+    :desc "Update Reviewed"      "R" #'my/update-reviewed
+    :desc "Remove Result"        :n "u" #'org-babel-remove-result
+    :desc "Remove Result Blocks" :n "U" #'+org/remove-result-blocks
+    :desc "Add Note"             :n "n" #'org-add-note
+    :desc "Archive"              :n "A" #'my/org-archive
+    :desc "Org export to clipboard"        "y" #'+org/export-to-clipboard
+    :desc "Org export to clipboard as RTF" "Y" #'+org/export-to-clipboard-as-rich-text
+   (:prefix  ("d" . "date")
+    :desc "Deadline"                       :n "d" #'org-deadline
+    :desc "Schedule"                       :n "s" #'org-schedule
+    :desc "Active Timestamp"               :n "t" #'org-time-stamp
+    :desc "Active Timestamp with Time"     :n "T" #'my/org-time-stamp-with-time
+    :desc "Inactive Timestamp"             :n "i" #'org-time-stamp-inactive
+    :desc "Inactive Timestamp with Time"   :n "I" #'my/org-time-stamp-inactive-with-time)
+   (:when (modulep! :lang org +noter)
+     :desc "Org noter"                  "N" #'org-noter)
+   (:prefix ("m" . "roam")
+    :desc "Extract Subtree"   "x" #'org-roam-extract-subtree)
+   (:prefix ("p" . "priority")
+    :desc "Priority Up"          :n "k" #'org-priority-up
+    :desc "Priority Down"        :n "j" #'org-priority-up
+    :desc "Priority Set"         :n "p" #'org-priority-up)))
 
-  (:leader
-        :desc "Capture"             "x"   #'org-capture)
 
- (:map org-mode-map
-  :desc "Move to Next Visible Heading"      :n "] h" #'org-next-visible-heading
-  :desc "Move to Previous Visible Heading"  :n "[ h" #'org-previous-visible-heading
-  :localleader :desc "Add Note"             :n "n" #'my/org-add-note)
-
- (:localleader
-  :desc "Remove Result"        :n "u" #'org-babel-remove-result
-  :desc "Remove Result Blocks" :n "U" #'+org/remove-result-blocks)
- (:leader :prefix ("\\" . "timeclock")
-  :desc "Clock In"             :n "i" #'org-clock-in
-  :desc "Clock Out"            :n "o" #'org-clock-out
-  :desc "Clock In Last"        :n "I" #'org-clock-in-last
-  :desc "Toggle last clock"    :n "l" #'+org/toggle-last-clock
-  :desc "Time Report"          :n "R" #'org-clock-report
-  :desc "Resolve Timeclocks"   :n "r" #'org-resolve-clocks
-  :desc "Goto Clock"           :n "g" #'org-clock-goto
-  :desc "Cancel Clock"         :n "c" #'org-clock-cancel
-  :desc "Evaluate Time Range"  :n "e" #'org-evaluate-time-range
-  :desc "Clock Jumplist"       :n "\\" #'my/org-clock-jumplist)
  (:leader :prefix ("n" . "notes")
   :desc "Find file in notes"           "f" #'+default/find-in-notes
   :desc "Browse notes"                 "F" #'+default/browse-notes
-  :desc "Org store link"               "l" #'org-store-link
-  :desc "Org insert stored links"      "L" #'org-insert-last-stored-link
   :desc "Tags search"                  "m" #'org-tags-view
   :desc "Org capture"                  "n" #'org-capture
   :desc "Goto capture"                 "N" #'org-capture-goto-target
   :desc "Active org-clock"             "o" #'org-clock-goto
-  :desc "Todo Options"                    "t" #'org-todo
   :desc "Todo list"                    "T" #'org-todo-list
   :desc "Search notes"                 "s" #'+default/org-notes-search
   :desc "Search org agenda headlines"  "S" #'+default/org-notes-headlines
   :desc "View search"                  "v" #'org-search-view
-  :desc "Org export to clipboard"        "y" #'+org/export-to-clipboard
-  :desc "Org export to clipboard as RTF" "Y" #'+org/export-to-clipboard-as-rich-text
   :desc "Search notes for symbol"      "*" #'+default/search-notes-for-symbol-at-point
   :desc "Org agenda"                   "a" #'org-agenda
-  :desc "Toggle last org-clock"        "c" #'+org/toggle-last-clock
-  :desc "Cancel current org-clock"     "C" #'org-clock-cancel
-  (:after org-roam-ql
-   :desc "Query Nodes"     "q" #'org-roam-ql-search)
-  (:prefix  ("d" . "date")
-   :desc "Deadline"                       :n "d" #'org-deadline
-   :desc "Schedule"                       :n "s" #'org-schedule
-   :desc "Active Timestamp"               :n "t" #'org-time-stamp
-   :desc "Active Timestamp with Time"     :n "T" #'my/org-time-stamp-with-time
-   :desc "Inactive Timestamp"             :n "i" #'org-time-stamp-inactive
-   :desc "Inactive Timestamp with Time"   :n "I" #'my/org-time-stamp-inactive-with-time)
-
+  :desc "Toggle last org-clock"        "C" #'+org/toggle-last-clock
+  (:prefix ("g". "goto")
+    :desc "Weekly Agenda Note"          "g" #'my/org-goto-current-week-file
+   (:prefix ("p". "Project-Local")
+    :desc "Project Todos"               "t" #'+org-capture-project-todo-file
+    :desc "Project Notes"               "n" #'+org-capture-project-notes-file
+    :desc "Project Changelog"           "c" #'+org-capture-project-changelog-file))
+  (:after org-ql
+   (:prefix ("q" . "query")
+    :desc "Views"               "v" #'org-ql-view
+    :desc "Find"                "f" #'org-ql-find
+    :desc "Query Entries"       "q" #'org-ql-search))
+  (:prefix ("c" . "clock")
+   :desc "Clock In"             :n "i" #'org-clock-in
+   :desc "Clock Out"            :n "o" #'org-clock-out
+   :desc "Clock In Last"        :n "I" #'org-clock-in-last
+   :desc "Toggle last clock"    :n "l" #'+org/toggle-last-clock
+   :desc "Time Report"          :n "R" #'org-clock-report
+   :desc "Resolve Timeclocks"   :n "r" #'org-resolve-clocks
+   :desc "Goto Clock"           :n "g" #'org-clock-goto
+   :desc "Cancel Clock"         :n "c" #'org-clock-cancel
+   :desc "Evaluate Time Range"  :n "e" #'org-evaluate-time-range
+   :desc "Clock Jumplist"       :n "\\" #'my/org-clock-jumplist)
   (:when (modulep! :tools biblio)
     :desc "Bibliographic notes"        "b"
     (cond ((modulep! :completion vertico)  #'citar-open-notes)
           ((modulep! :completion ivy)      #'ivy-bibtex)
           ((modulep! :completion helm)     #'helm-bibtex)))
-  (:when (modulep! :lang org +noter)
-    :desc "Org noter"                  "e" #'org-noter)
   (:when (modulep! :lang org +roam2)
     :desc "Find Node"          "f" #'org-roam-node-find
-    :desc "Insert Node"        "i" #'org-roam-node-insert
-    :desc "Insert ID"        "I" #'org-id-get-create
     :desc "Capture Node"       "n" #'org-roam-capture
-    :desc "Refile Node"        "N" #'org-roam-refile
-    :desc "Update Reviewed"    "R" #'my/update-reviewed
-    :desc "Extract Subtree"    "x" #'org-roam-extract-subtree
-    (:prefix  ("d" . "date")
-     :desc "Goto Today"           "g" #'org-roam-dailies-goto-today
-     :desc "Goto Date"            "G" #'org-roam-dailies-goto-date
-     :desc "Capture Today"        "n" #'org-roam-dailies-capture-today
-     :desc "Capture Date"         "N" #'org-roam-dailies-capture-date)
     (:prefix ("r" . "roam")
-     :desc "Open random node"           "a" #'org-roam-node-random
-     :desc "Find node"                  "f" #'org-roam-node-find
-     :desc "Find ref"                   "F" #'org-roam-ref-find
-     :desc "Show graph"                 "g" #'org-roam-graph
-     :desc "Insert node"                "i" #'org-roam-node-insert
-     :desc "Capture to node"            "n" #'org-roam-capture
-     :desc "Toggle roam buffer"         "r" #'org-roam-buffer-toggle
-     :desc "Launch roam buffer"         "R" #'org-roam-buffer-display-dedicated
-     :desc "Sync database"              "s" #'org-roam-db-sync
-     (:prefix ("d" . "by date")
-      :desc "Goto previous note"        "b" #'org-roam-dailies-goto-previous-note
-      :desc "Goto date"                 "d" #'org-roam-dailies-goto-date
-      :desc "Capture date"              "D" #'org-roam-dailies-capture-date
-      :desc "Goto next note"            "f" #'org-roam-dailies-goto-next-note
-      :desc "Goto tomorrow"             "m" #'org-roam-dailies-goto-tomorrow
-      :desc "Capture tomorrow"          "M" #'org-roam-dailies-capture-tomorrow
-      :desc "Capture today"             "n" #'org-roam-dailies-capture-today
-      :desc "Goto today"                "t" #'org-roam-dailies-goto-today
-      :desc "Capture today"             "T" #'org-roam-dailies-capture-today
-      :desc "Goto yesterday"            "y" #'org-roam-dailies-goto-yesterday
-      :desc "Capture yesterday"         "Y" #'org-roam-dailies-capture-yesterday
-      :desc "Find directory"            "-" #'org-roam-dailies-find-directory)))))
+     (:after org-roam-ql
+      :desc "Query Nodes"     "q" #'org-roam-ql-search)
+      :desc "Open random node"           "a" #'org-roam-node-random
+      :desc "Find node"                  "f" #'org-roam-node-find
+      :desc "Find ref"                   "F" #'org-roam-ref-find
+      :desc "Show graph"                 "g" #'org-roam-graph
+      :desc "Insert node"                "i" #'org-roam-node-insert
+      :desc "Capture to node"            "n" #'org-roam-capture
+      :desc "Toggle roam buffer"         "r" #'org-roam-buffer-toggle
+      :desc "Launch roam buffer"         "R" #'org-roam-buffer-display-dedicated
+      :desc "Sync database"              "s" #'org-roam-db-sync
+      (:prefix ("d" . "by date")
+       :desc "Goto previous note"        "b" #'org-roam-dailies-goto-previous-note
+       :desc "Goto date"                 "d" #'org-roam-dailies-goto-date
+       :desc "Capture date"              "D" #'org-roam-dailies-capture-date
+       :desc "Goto next note"            "f" #'org-roam-dailies-goto-next-note
+       :desc "Goto tomorrow"             "m" #'org-roam-dailies-goto-tomorrow
+       :desc "Capture tomorrow"          "M" #'org-roam-dailies-capture-tomorrow
+       :desc "Capture today"             "n" #'org-roam-dailies-capture-today
+       :desc "Goto today"                "t" #'org-roam-dailies-goto-today
+       :desc "Capture today"             "T" #'org-roam-dailies-capture-today
+       :desc "Goto yesterday"            "y" #'org-roam-dailies-goto-yesterday
+       :desc "Capture yesterday"         "Y" #'org-roam-dailies-capture-yesterday
+       :desc "Find directory"            "-" #'org-roam-dailies-find-directory)))))
 #+end_src
 
 ** No Idea
@@ -1565,7 +1569,7 @@ numbers are disabled. For relative line numbers, set this to `relative'.
 (add-hook 'elfeed-new-entry-hook #'ime-elfeed-podcast-tagger)
 
 (elfeed-org)
-(setq rmh-elfeed-org-files (list (expand-file-name "journal/elfeed.org" org-directory)))
+(setq rmh-elfeed-org-files (list (expand-file-name "elfeed.org" org-directory)))
 #+end_src
 
 ** Magit
@@ -1962,10 +1966,6 @@ Consider adding this file to your list of agenda files so that events show up th
 (after! org
  (defconst seconds-in-day 86400)
 
- (defvar org-weekly-head
-   (concat "#+title:" (format-time-string "%Y-W%W") "\n")
-   "Contents appended to the head of a weekly capture file")
-
  (defvar review-length-days 90
   "Number of days between full reviews of all nodes in org-roam database.")
 
@@ -1990,22 +1990,6 @@ Consider adding this file to your list of agenda files so that events show up th
    (interactive)
    (org-clock-goto 'select))
 
- (defun my/org-add-note ()
-   (interactive)
-   (org-fold-show-entry)
-   (let ((position (- (org-entry-end-position) 1)))
-     (goto-char position)
-     (let* ((org_list (org-list-struct))
-            (prevs (org-list-prevs-alist org_list)))
-       (if (eq org_list 'nil) (progn
-                                (newline-and-indent)
-                                (insert "- Note taken on "))
-         (org-list-insert-item position org_list prevs 'nil "Note taken on "))
-       (org-end-of-line)
-       (org-time-stamp-inactive '(16))
-       (newline-and-indent)
-       (evil-insert 1))))
-
  (defun my/org-time-stamp-inactive-with-time ()
    (interactive)
    (org-time-stamp-inactive 't))
@@ -2023,32 +2007,49 @@ Consider adding this file to your list of agenda files so that events show up th
    (org-set-property "CREATED" (org-timestamp-translate (org-timestamp-from-time (current-time) 't 't))))
 
 
- (defun my/org-capture-week-file ()
+ (defun my/org-archive ()
+   (interactive)
+   (org-set-tags (add-to-list (org-get-tags 'nil 't) org-archive-tag 't))
+   (org-archive-subtree-default))
+
+ (defun my/org-goto-current-week-file ()
+   (find-file my/org-current-week-file))
+
+ (defun my/org-current-week-file ()
    "Return the filename of the current capture week file creating it if it doesn't exist"
    (let ((filename
           (expand-file-name (format-time-string "%Y-W%W.org") org-weekly-directory)))
+        (unless (f-exists? filename) (f-touch filename))
         filename))
 
- (defun my/org-quick-capture-template ()
-   (let* ((scheduled (when (y-or-n-p "Scheduled?")
-                               (concat ":SCHEDULED:" (org-timestamp-translate  (org-timestamp-from-time (org-read-date 'nil 't))))))
-         (deadline (when (y-or-n-p "Deadline?")
-                             (concat ":DEADLINE:" (org-timestamp-translate  (org-timestamp-from-time (org-read-date 'nil 't))))))
+ (defun my/org-capture-template-with-timestamps (TEMPLATE)
+   "Returns a function that prepends timestamps given by the user to TEMPLATE"
+   (let* (
+          (deadline (when (y-or-n-p "Deadline?")
+                             (concat "DEADLINE: " (org-timestamp-translate  (org-timestamp-from-time (org-read-date 'nil 't))) " ")))
+          (scheduled (when (y-or-n-p "Scheduled?")
+                               (concat "SCHEDULED: " (org-timestamp-translate  (org-timestamp-from-time (org-read-date 'nil 't))))))
              (newline (when (or deadline scheduled) "\n")))
-        (concat "* %i%? :Inbox:\n" scheduled deadline newline)))
+        (concat TEMPLATE deadline scheduled newline)))
+
+ (defun my/org-capture-quick-template () (my/org-capture-template-with-timestamps "* %i%? :Inbox:\n"))
+ (defun my/org-capture-task-template () (my/org-capture-template-with-timestamps "* TODO %i%? \n"))
+
 
  (defun my/org-todo ()
    (when (y-or-n-p "Edit Todo State?") (org-todo)))
 
  (defun my/org-set-tags ()
-   (when (y-or-n-p "Edit tags?") (org-set-tags-command)))
+   (when (y-or-n-p "Edit Tags?") (org-set-tags-command)))
+
+ (defun my/org-priority ()
+   (when (y-or-n-p "Edit Priority?") (org-priority)))
 
 
   (setq
         org-attach-auto-tag nil
-        org-archive-location (concat org-directory "archive/%s_archive::datetree/")
+        org-archive-location "./archive.org::datetree/* From %s"
         org-directory (file-truename "~/org/")
-        org-agenda-files (list org-agenda-directory)
         org-plantuml-jar-path  "/usr/local/Cellar/plantuml/1.2023.13/libexec/plantuml.jar"
         org-log-done 'time)
 
@@ -2081,27 +2082,38 @@ Consider adding this file to your list of agenda files so that events show up th
  (add-hook! #'auto-save-hook #'org-save-all-org-buffers)
  (add-hook! #'org-clock-in-hook #'org-save-all-org-buffers)
  (add-hook! #'org-clock-out-hook #'org-save-all-org-buffers)
- (add-hook! 'org-capture-prepare-finalize-hook #'my/org-capture-add-created)
- (add-hook! 'org-capture-prepare-finalize-hook #'my/org-todo)
- (add-hook! 'org-capture-prepare-finalize-hook #'my/org-set-tags)
+
+
 
  (setq
-        org-todo-keywords '((sequence "TODO(t)" "HOLD(h)" "|" "DONE(d)" "KILL(k)"))
+        org-todo-keywords '((sequence "TODO(t)" "HOLD(h!/!)" "|" "DONE(d!)" "KILL(k!)"))
+        org-log-refile 'time
+        org-log-refile 'time
+        org-log-reschedule 'time
+        org-log-redeadline 'time
+        org-log-done-with-time 't
+        org-log-note-clock-out 't
+        org-log-done 'note
+        org-log-into-drawer t
         org-todo-repeat-to-state 't
         org-file-exclude-regexp
         (append (mapcar #'(lambda (x) (file-truename (expand-file-name x org-directory))) '(".Trash/" "data/" "logsec/")) (list org-attach-id-dir)))
 
+
  (setq org-capture-templates
        '(("x" "Quick" entry
-          (file my/org-capture-week-file)
-          (function my/org-quick-capture-template))
+          (file my/org-current-week-file)
+          (function my/org-capture-quick-template)
+          :prepare-finalize (list my/org-capture-add-created my/org-priority my/org-todo my/org-set-tags))
         ("r" "Review" entry
-         (file my/org-capture-week-file)
+         (file my/org-current-week-file)
          "* TODO Review %a%? :Inbox:Review:\n"
+         :prepare-finalize my/org-capture-add-created
          :immediate-finish 't)
-        ("n" "Current Task" entry
-          (file my/org-capture-week-file)
-          "* TODO %i%? \n"
+        ("c" "Clock-In New Task" entry
+          (file my/org-current-week-file)
+          (function my/org-capture-task-template)
+          :prepare-finalize (list my/org-capture-add-created my/org-priority my/org-todo my/org-set-tags)
           :clock-in t)
         ("p" "Project-local")
         ("pt" "Project-local Todo" entry (file +org-capture-project-todo-file) "* TODO %? :Inbox:\n%i\n%a"
@@ -2119,7 +2131,10 @@ Consider adding this file to your list of agenda files so that events show up th
     (interactive)
     (org-agenda nil "n"))
 
-  (setq org-super-agenda-header-map (make-sparse-keymap))
+  (org-super-agenda-mode)
+
+  (setq org-super-agenda-header-map (make-sparse-keymap)
+        org-agenda-files (list org-agenda-directory org-weekly-directory))
 
   (defun my/org-agenda-id-get-create ()
     (interactive)
@@ -2146,7 +2161,6 @@ Consider adding this file to your list of agenda files so that events show up th
    org-agenda-inhibit-startup 'nil
    org-agenda-start-day 'nil
    org-agenda-custom-commands
-
    '(("n" "Today and TODOs"
       ((agenda "" ((org-agenda-overriding-header "")
                    (org-agenda-include-diary t)
@@ -2161,9 +2175,8 @@ Consider adding this file to your list of agenda files so that events show up th
                                 :habit t
                                 :and (
                                       :not (:children todo)
-                                      :file-path ".*personal.*"))
+                                      :tag "Personal"))
                             (:name "Projects"
-                                :file-path ".*project.*"
                                 :tag "Project"
                                 :order 3)
                             (:auto-outline-path t
@@ -2174,30 +2187,30 @@ Consider adding this file to your list of agenda files so that events show up th
                         '((:discard (:habit t :todo "DONE" :todo "KILL" :scheduled today :deadline today))
                           (:name "Inbox"
                                 :todo "REVIEW"
-                                :file-path ".*inbox.*")
+                                :tag "Inbox")
                           (:name "Important"
                                 :priority "A")
-                          (:auto-parent t :order 100)
-                          (:name "HOLD" :and (:not (:tag "Project") :todo "HOLD") :order 5)
+                          (:auto-parent t :order 5)
+                          (:name "HOLD" :and (:not (:tag "Project") :todo "HOLD") :order 100)
                           (:name "Projects"
                                 :and (:not (:children todo)
                                       :tag "Project")
-                                :transformer #'my/org-agenda-transform-project
-                                :order 10)
+                                :order 4)
                           (:name "Personal"
                                 :and (:not (:children todo)
-                                      :file-path ".*personal.*")
+                                      :tag "Personal")
                                 :order 1)
                           (:discard (:children todo))
                           )))))
-       ()))))
+       ((org-agenda-prefix-format '((agenda . "%i %?-12t%-12s") (todo . "  %-5e %i") (tags . "%i") (search . "%i")))))))
+
+  (add-to-list 'org-modules 'org-habit)
+  (setq org-habit-show-habits-only-for-today t)
+  )
 #+end_src
+
 **** Org Super Agenda
 #+begin_src emacs-lisp :tangle yes
-(after! org
-(add-to-list 'org-modules 'org-habit)
-(setq org-super-agenda-mode 't
-      org-habit-show-habits-only-for-today t))
 #+end_src
 *** Ox-hugo
 #+begin_src emacs-lisp :tangle yes
