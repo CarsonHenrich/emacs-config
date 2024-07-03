@@ -1454,7 +1454,8 @@ numbers are disabled. For relative line numbers, set this to `relative'.
    :desc "Move to Next Visible Heading"      :n "] h" #'org-next-visible-heading
    :desc "Move to Previous Visible Heading"  :n "[ h" #'org-previous-visible-heading
    (:localleader
-    :desc "Update Reviewed"      "R" #'my/update-reviewed
+    :desc "Update Reviewed"         "R" #'my/org-update-reviewed
+    :desc "Add Created"             "C" #'my/org-add-created
     :desc "Remove Result"        :n "u" #'org-babel-remove-result
     :desc "Remove Result Blocks" :n "U" #'+org/remove-result-blocks
     :desc "Add Note"             :n "n" #'org-add-note
@@ -1474,8 +1475,8 @@ numbers are disabled. For relative line numbers, set this to `relative'.
     :desc "Extract Subtree"   "x" #'org-roam-extract-subtree)
    (:prefix ("p" . "priority")
     :desc "Priority Up"          :n "k" #'org-priority-up
-    :desc "Priority Down"        :n "j" #'org-priority-up
-    :desc "Priority Set"         :n "p" #'org-priority-up)))
+    :desc "Priority Down"        :n "j" #'org-priority-down
+    :desc "Set Priority"         :n "p" #'org-priority)))
 
 
  (:leader :prefix ("n" . "notes")
@@ -1493,11 +1494,11 @@ numbers are disabled. For relative line numbers, set this to `relative'.
   :desc "Org agenda"                   "a" #'org-agenda
   :desc "Toggle last org-clock"        "C" #'+org/toggle-last-clock
   (:prefix ("g". "goto")
-    :desc "Weekly Agenda Note"          "g" #'my/org-goto-current-week-file
-   (:prefix ("p". "Project-Local")
-    :desc "Project Todos"               "t" #'+org-capture-project-todo-file
-    :desc "Project Notes"               "n" #'+org-capture-project-notes-file
-    :desc "Project Changelog"           "c" #'+org-capture-project-changelog-file))
+    :desc "Last Refile"                :n "r" #'org-refile-goto-last-stored
+    :desc "Last Capture"               :n "x" #'org-capture-goto-last-stored
+    :desc "Clock"                      :n "c" #'org-clock-goto
+    :desc "Weekly Agenda Note"         :n "g" #'my/org-goto-current-week-file
+    :desc "Project Notes"              :n "p" #'my/org-goto-project-notes-file)
   (:after org-ql
    (:prefix ("q" . "query")
     :desc "Views"               "v" #'org-ql-view
@@ -1997,22 +1998,29 @@ Consider adding this file to your list of agenda files so that events show up th
    (interactive)
    (org-time-stamp 't))
 
- (defun my/update-reviewed ()
+ (defun my/org-update-reviewed ()
    (interactive "*")
    (org-set-property "REVIEWED" (format-time-string "%Y-%m-%d %H:%M:%S")))
 
- (defun my/org-capture-add-created ()
+ (defun my/org-add-created ()
    (interactive)
    (org-set-property "CREATED" (org-timestamp-translate (org-timestamp-from-time (current-time) 't 't))))
 
 
  (defun my/org-archive ()
    (interactive)
-   (org-set-tags (add-to-list (org-get-tags 'nil 't) org-archive-tag 't))
+   (org-archive-set-tag)
    (org-archive-subtree-default))
 
- (defun my/org-goto-current-week-file ()
-   (find-file my/org-current-week-file))
+ (defun my/org-agenda-archive ()
+   (interactive)
+   (org-agenda-toggle-archive-tag)
+   (org-agenda-archive-default))
+
+
+ (defun my/org-goto-project-notes-file ()
+   (interactive)
+   (find-file (+org-capture-project-notes-file)))
 
  (defun my/org-current-week-file ()
    "Return the filename of the current capture week file creating it if it doesn't exist"
@@ -2020,6 +2028,10 @@ Consider adding this file to your list of agenda files so that events show up th
           (expand-file-name (format-time-string "%Y-W%W.org") org-weekly-directory)))
         (unless (f-exists? filename) (f-touch filename))
         filename))
+
+ (defun my/org-goto-current-week-file ()
+   (interactive)
+   (find-file (my/org-current-week-file)))
 
 (setq initial-buffer-choice (my/org-current-week-file))
 
@@ -2033,22 +2045,31 @@ Consider adding this file to your list of agenda files so that events show up th
              (newline (when (or deadline scheduled) "\n")))
         (concat TEMPLATE deadline scheduled newline)))
 
- (defun my/org-capture-quick-template () (my/org-capture-template-with-timestamps "* %i%? :Inbox:\n"))
- (defun my/org-capture-task-template () (my/org-capture-template-with-timestamps "* TODO %i%? \n"))
+ ;; NOTE [2024-07-02 Tue 22:17] Commented out to see if I really need any of this
+ ;; (defun my/org-capture-y-n-hook (S F)
+ ;;   "A template function for hooks to run in org-capture-before-finalize that
+ ;;   asks a yes or no question S if the capture wasn't aborted and conditionally executes F"
+ ;;   (when (and (not org-note-abort) (y-or-n-p S)) (funcall-interactively F 'nil)))
 
+ ;; (defun my/org-set-scheduled ()
+ ;;   (my/org-capture-y-n-hook "Scheduled?" #'org-schedule))
 
- (defun my/org-todo ()
-   (when (y-or-n-p "Edit Todo State?") (org-todo)))
+ ;; (defun my/org-set-deadline ()
+ ;;   (my/org-capture-y-n-hook "Deadline?" #'org-deadline))
 
- (defun my/org-set-tags ()
-   (when (y-or-n-p "Edit Tags?") (org-set-tags-command)))
+ ;; (defun my/org-set-todo ()
+ ;;   (my/org-capture-y-n-hook "Edit Todo State?" #'org-todo))
 
- (defun my/org-priority ()
-   (when (y-or-n-p "Edit Priority?") (org-priority)))
+ ;; (defun my/org-set-tags ()
+ ;;   (my/org-capture-y-n-hook "Edit Tags?" #'org-set-tags-command))
 
+ ;; (defun my/org-set-priority ()
+ ;;   (my/org-capture-y-n-hook "Edit Priority?" #'org-priority))
 
   (setq
         org-attach-auto-tag nil
+        org-archive-subtree-add-inherited-tags 't
+        org-archive-mark-done 'nil
         org-archive-location "./archive.org::datetree/* From %s"
         org-directory (file-truename "~/org/")
         org-plantuml-jar-path  "/usr/local/Cellar/plantuml/1.2023.13/libexec/plantuml.jar"
@@ -2104,24 +2125,29 @@ Consider adding this file to your list of agenda files so that events show up th
  (setq org-capture-templates
        '(("x" "Quick" entry
           (file my/org-current-week-file)
-          (function my/org-capture-quick-template)
-          :prepare-finalize (list my/org-capture-add-created my/org-priority my/org-todo my/org-set-tags))
+          "* %i%? \n"
+          :prepare-finalize my/org-add-created)
         ("r" "Review" entry
          (file my/org-current-week-file)
          "* TODO Review %a%? :Inbox:Review:\n"
-         :prepare-finalize my/org-capture-add-created
+         :prepare-finalize my/org-add-created
          :immediate-finish 't)
         ("c" "Clock-In New Task" entry
           (file my/org-current-week-file)
-          (function my/org-capture-task-template)
-          :prepare-finalize (list my/org-capture-add-created my/org-priority my/org-todo my/org-set-tags)
+          "* TODO %i%? \n"
+          :prepare-finalize my/org-add-created
           :clock-in t)
+        ("r" "Review" entry
+         (clock)
+         "* TODO Review %a%? :Inbox:Review:\n"
+         :prepare-finalize my/org-add-created
+         :immediate-finish 't)
         ("p" "Project-local")
-        ("pt" "Project-local Todo" entry (file +org-capture-project-todo-file) "* TODO %? :Inbox:\n%i\n%a"
+        ("pt" "Project-local Todo" entry (file +org-capture-project-notes-file) "* TODO %? :Inbox:\n%i\n%a"
           :unnarrowed t)
-        ("pn" "Project-local Notes" entry (file +org-capture-project-notes-file) "* %? :Inbox:\n%i\n%a"
+        ("pn" "Project-local Notes" entry (file +org-capture-project-notes-file) "* %? :Notes:Inbox:\n%i\n%a"
           :unnarrowed t)
-        ("pc" "Project-local Changelog" entry (file+headline +org-capture-project-changelog-file "Unreleased") "* %?\n%i\n%a"
+        ("pc" "Project-local Changelog" entry (file+olp +org-capture-project-notes-file) "* %? :Changelog:Unreleased:Inbox:\n%i\n%a"
           :unnarrowed t))))
 #+end_src
 
@@ -2185,13 +2211,12 @@ Consider adding this file to your list of agenda files so that events show up th
                             ))))
 
        (alltodo "" ((org-super-agenda-groups
-                        '((:discard (:habit t :todo "DONE" :todo "KILL" :scheduled today :deadline today))
-                          (:name "Inbox"
-                                :todo "REVIEW"
+                        '((:name "Inbox"
                                 :tag "Inbox")
+                          (:discard (:habit t :todo "DONE" :todo "KILL" :scheduled today :deadline today))
                           (:name "Important"
                                 :priority "A")
-                          (:auto-parent t :order 5)
+                          (:auto-outline-path t :order 5)
                           (:name "HOLD" :and (:not (:tag "Project") :todo "HOLD") :order 100)
                           (:name "Projects"
                                 :and (:not (:children todo)
