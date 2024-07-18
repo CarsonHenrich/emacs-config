@@ -465,9 +465,6 @@ puts
     (pop-to-buffer-same-window buf)))
 #+end_src
 
-#+RESULTS:
-: find-file-new-buffer
-
 * Appearance
 ** Theme
 There are two ways to load a theme. Both assume the theme is installed and
@@ -1469,6 +1466,9 @@ numbers are disabled. For relative line numbers, set this to `relative'.
     :desc "Active Timestamp with Time"     :n "T" #'my/org-time-stamp-with-time
     :desc "Inactive Timestamp"             :n "i" #'org-time-stamp-inactive
     :desc "Inactive Timestamp with Time"   :n "I" #'my/org-time-stamp-inactive-with-time)
+   (:prefix  ("s" . "subtree")
+    :desc "Archive Subtree to Sibling"   :n "z" #'org-archive-to-archive-sibling)
+
    (:when (modulep! :lang org +noter)
      :desc "Org noter"                  "N" #'org-noter)
    (:prefix ("m" . "roam")
@@ -1499,7 +1499,7 @@ numbers are disabled. For relative line numbers, set this to `relative'.
     :desc "Clock"                      :n "c" #'org-clock-goto
     :desc "Weekly Agenda Note"         :n "g" #'my/org-goto-current-week-file
     :desc "Project Notes"              :n "p" #'my/org-goto-project-notes-file)
-  (:after org-ql
+  (:when (fboundp 'org-ql-search)
    (:prefix ("q" . "query")
     :desc "Views"               "v" #'org-ql-view
     :desc "Find"                "f" #'org-ql-find
@@ -1686,15 +1686,6 @@ If `DEVICE-NAME' is provided, it will be used instead of prompting the user."
   '(mode-line-inactive ((t (:family my/fixed-width-font :height 0.8)))))
 #+end_src
 
-** Leetcode
-#+begin_src emacs-lisp :tangle yes
-(setq leetcode-prefer-language "python3")
-(setq leetcode-prefer-sql "mysql")
-(setq leetcode-save-solutions t)
-(setq leetcode-directory "~/leetcode")
-(add-hook 'leetcode-solution-mode-hook
-          (lambda() (flycheck-mode -1)))
-#+end_src
 ** Mail
 *** General
 #+begin_src emacs-lisp :tangle config.el
@@ -1882,8 +1873,33 @@ a =%s= where the query will be expanded.
  ("Noogle"  "https://noogle.dev/q?term=%s")
  ("Home-Manager Options"  "https://mipmip.github.io/home-manager-option-search/?query=%s")))))
 #+end_src
-** REVIEW Khalel
-#+begin_src emacs-lisp 
+** PDF
+*** Noter
+#+begin_src emacs-lisp :tangle config.el
+(after! org-noter
+      (setq org-noter-notes-search-path (mapcar (lambda (x) (expand-file-name x org-directory)) '("journal" "annotations")))
+      (org-noter-enable-org-roam-integration)
+      (org-noter-enable-update-renames))
+#+end_src
+
+** Archive :ARCHIVE:
+*** Leetcode
+:PROPERTIES:
+:ARCHIVE_TIME: 2024-07-17 Wed 17:43
+:END:
+#+begin_src emacs-lisp :tangle no
+(setq leetcode-prefer-language "python3")
+(setq leetcode-prefer-sql "mysql")
+(setq leetcode-save-solutions t)
+(setq leetcode-directory "~/leetcode")
+(add-hook 'leetcode-solution-mode-hook
+          (lambda() (flycheck-mode -1)))
+#+end_src
+*** Khalel
+:PROPERTIES:
+:ARCHIVE_TIME: 2024-07-17 Wed 17:43
+:END:
+#+begin_src emacs-lisp :tangle no
 (use-package! khalel
   :after org
   :config
@@ -1915,16 +1931,10 @@ Consider adding this file to your list of agenda files so that events show up th
 (require 'khalel-icalendar)
 #+end_src
 
-** PDF
-*** Noter
-#+begin_src emacs-lisp :tangle config.el
-(after! org-noter
-      (setq org-noter-notes-search-path (mapcar (lambda (x) (expand-file-name x org-directory)) '("journal" "annotations")))
-      (org-noter-enable-org-roam-integration)
-      (org-noter-enable-update-renames))
-#+end_src
-
-** TODO Debugging
+*** TODO Debugging
+:PROPERTIES:
+:ARCHIVE_TIME: 2024-07-17 Wed 17:43
+:END:
 * Language Support
 ** SQL
 #+begin_src emacs-lisp :tangle packages.el
@@ -2067,10 +2077,11 @@ Consider adding this file to your list of agenda files so that events show up th
  ;;   (my/org-capture-y-n-hook "Edit Priority?" #'org-priority))
 
   (setq
+        org-crypt-tag-matcher "CRYPT"
         org-attach-auto-tag nil
         org-archive-subtree-add-inherited-tags 't
         org-archive-mark-done 'nil
-        org-archive-location "./archive.org::datetree/* From %s"
+        org-archive-location "./archive/archive_%s::"
         org-directory (file-truename "~/org/")
         org-plantuml-jar-path  "/usr/local/Cellar/plantuml/1.2023.13/libexec/plantuml.jar"
         org-log-done 'time)
@@ -2126,28 +2137,26 @@ Consider adding this file to your list of agenda files so that events show up th
        '(("x" "Quick" entry
           (file my/org-current-week-file)
           "* %i%? \n"
+          :prepend 't
           :prepare-finalize my/org-add-created)
         ("r" "Review" entry
          (file my/org-current-week-file)
-         "* TODO Review %a%? :Inbox:Review:\n"
+         "* TODO Review %a%? :INBOX:Review:\n"
+         :prepend 't
          :prepare-finalize my/org-add-created
          :immediate-finish 't)
         ("c" "Clock-In New Task" entry
           (file my/org-current-week-file)
           "* TODO %i%? \n"
+          :prepend 't
           :prepare-finalize my/org-add-created
           :clock-in t)
-        ("r" "Review" entry
-         (clock)
-         "* TODO Review %a%? :Inbox:Review:\n"
-         :prepare-finalize my/org-add-created
-         :immediate-finish 't)
         ("p" "Project-local")
-        ("pt" "Project-local Todo" entry (file +org-capture-project-notes-file) "* TODO %? :Inbox:\n%i\n%a"
+        ("pt" "Project-local Todo" entry (file +org-capture-project-notes-file) "* TODO %? :INBOX:\n%i\n%a"
           :unnarrowed t)
-        ("pn" "Project-local Notes" entry (file +org-capture-project-notes-file) "* %? :Notes:Inbox:\n%i\n%a"
+        ("pn" "Project-local Notes" entry (file +org-capture-project-notes-file) "* %? :Notes:INBOX:\n%i\n%a"
           :unnarrowed t)
-        ("pc" "Project-local Changelog" entry (file+olp +org-capture-project-notes-file) "* %? :Changelog:Unreleased:Inbox:\n%i\n%a"
+        ("pc" "Project-local Changelog" entry (file+olp +org-capture-project-notes-file) "* %? :Changelog:Unreleased:INBOX:\n%i\n%a"
           :unnarrowed t))))
 #+end_src
 
@@ -2199,12 +2208,11 @@ Consider adding this file to your list of agenda files so that events show up th
                             (:name "Important"
                                 :priority "A")
                             (:name "Personal"
-                                :habit t
                                 :and (
                                       :not (:children todo)
                                       :tag "Personal"))
                             (:name "Projects"
-                                :tag "Project"
+                                :tag "PROJECT"
                                 :order 3)
                             (:auto-outline-path t
                              :order 4)
@@ -2212,15 +2220,15 @@ Consider adding this file to your list of agenda files so that events show up th
 
        (alltodo "" ((org-super-agenda-groups
                         '((:name "Inbox"
-                                :tag "Inbox")
+                                :tag "INBOX")
                           (:discard (:habit t :todo "DONE" :todo "KILL" :scheduled today :deadline today))
                           (:name "Important"
                                 :priority "A")
                           (:auto-outline-path t :order 5)
-                          (:name "HOLD" :and (:not (:tag "Project") :todo "HOLD") :order 100)
+                          (:name "HOLD" :and (:not (:tag "PROJECT") :todo "HOLD") :order 100)
                           (:name "Projects"
                                 :and (:not (:children todo)
-                                      :tag "Project")
+                                      :tag "PROJECT")
                                 :order 4)
                           (:name "Personal"
                                 :and (:not (:children todo)
