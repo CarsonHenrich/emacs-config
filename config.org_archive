@@ -1,0 +1,35 @@
+#    -*- mode: org -*-
+
+
+Archived entries from file /Users/carsonhenrich/.config/doom/config.org
+
+
+* Archive :ARCHIVE:
+:PROPERTIES:
+:ARCHIVE_TIME: 2024-07-22 Mon 19:38
+:ARCHIVE_FILE: ~/.config/doom/config.org
+:ARCHIVE_OLPATH: Language Support
+:ARCHIVE_CATEGORY: config
+:END:
+** Latex support
+:PROPERTIES:
+:ARCHIVE_TIME: 2024-07-22 Mon 13:10
+:END:
+#+begin_src emacs-lisp :tangle no
+(with-eval-after-load "tex"
+  ;; enable synctex support for latex-mode
+  (add-hook 'LaTeX-mode-hook 'TeX-source-correlate-mode)
+  ;; add a new view program
+  (add-to-list 'TeX-view-program-list
+        '(;; arbitrary name for this view program
+          "Zathura"
+          (;; zathura command (may need an absolute path)
+           "zathura"
+           ;; %o expands to the name of the output file
+           " %o"
+           ;; insert page number if TeX-source-correlate-mode
+           ;; is enabled
+           (mode-io-correlate " --synctex-forward %n:0:%b"))))
+  ;; use the view command named "Zathura" for pdf output
+  (setcdr (assq 'output-pdf TeX-view-program-selection) '("Zathura")))
+#+end_src

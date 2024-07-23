@@ -8,3 +8,4 @@ config.el
 keybinds.el
 /keymaps.el
 /custom.el
+/modules/
