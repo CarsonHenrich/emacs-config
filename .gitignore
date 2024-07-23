@@ -6,3 +6,5 @@ packages.el
 init.el
 config.el
 keybinds.el
+/keymaps.el
+/custom.el

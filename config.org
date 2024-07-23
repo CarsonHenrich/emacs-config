@@ -1452,11 +1452,10 @@ numbers are disabled. For relative line numbers, set this to `relative'.
    :desc "Move to Previous Visible Heading"  :n "[ h" #'org-previous-visible-heading
    (:localleader
     :desc "Update Reviewed"         "R" #'my/org-update-reviewed
-    :desc "Add Created"             "C" #'my/org-add-created
+    :desc "Add Created"             "C" #'my/org-capture-add-created
     :desc "Remove Result"        :n "u" #'org-babel-remove-result
     :desc "Remove Result Blocks" :n "U" #'+org/remove-result-blocks
     :desc "Add Note"             :n "n" #'org-add-note
-    :desc "Archive"              :n "A" #'my/org-archive
     :desc "Org export to clipboard"        "y" #'+org/export-to-clipboard
     :desc "Org export to clipboard as RTF" "Y" #'+org/export-to-clipboard-as-rich-text
    (:prefix  ("d" . "date")
@@ -1468,6 +1467,24 @@ numbers are disabled. For relative line numbers, set this to `relative'.
     :desc "Inactive Timestamp with Time"   :n "I" #'my/org-time-stamp-inactive-with-time)
    (:prefix  ("s" . "subtree")
     :desc "Archive Subtree to Sibling"   :n "z" #'org-archive-to-archive-sibling)
+   (:prefix ("c" . "clock")
+    :n "d" 'nil
+    :n "G" 'nil
+    :desc "Clock Range Prev Day"          :n "-" #'org-clock-timestamps-up
+    :desc "Clock Range Next Day"          :n "=" #'org-clock-timestamps-down
+    :desc "Eval Time Range"               :n "t" #'org-evaluate-time-range
+    :desc "Clock In"                      :n "i" #'org-clock-in
+    :desc "Clock In"                      :n "i" #'org-clock-in
+    :desc "Clock Out"                     :n "o" #'org-clock-out
+    :desc "Clock In Last"                 :n "I" #'org-clock-in-last
+    :desc "Modify Effort"                 :n "e" #'org-clock-modify-effort-estimate
+    :desc "Set Effort"                    :n "E" #'org-set-effort
+    :desc "Toggle last clock"             :n "l" #'+org/toggle-last-clock
+    :desc "Resolve Timeclocks"            :n "r" #'org-resolve-clocks
+    :desc "Time Report"                   :n "R" #'org-clock-report
+    :desc "Goto Clock"                    :n "g" #'org-clock-goto
+    :desc "Clock Jumplist"                :n "c" #'my/org-clock-jumplist
+    :desc "Cancel Clock"                  :n "C" #'org-clock-cancel)
 
    (:when (modulep! :lang org +noter)
      :desc "Org noter"                  "N" #'org-noter)
@@ -1497,24 +1514,24 @@ numbers are disabled. For relative line numbers, set this to `relative'.
     :desc "Last Refile"                :n "r" #'org-refile-goto-last-stored
     :desc "Last Capture"               :n "x" #'org-capture-goto-last-stored
     :desc "Clock"                      :n "c" #'org-clock-goto
-    :desc "Weekly Agenda Note"         :n "g" #'my/org-goto-current-week-file
-    :desc "Project Notes"              :n "p" #'my/org-goto-project-notes-file)
+    :desc "Weekly Agenda Note"         :n "g" #'my/org-capture-goto-week-file
+    :desc "Project Notes"              :n "p" #'my/org-capture-goto-project-notes-file)
   (:when (fboundp 'org-ql-search)
    (:prefix ("q" . "query")
     :desc "Views"               "v" #'org-ql-view
     :desc "Find"                "f" #'org-ql-find
     :desc "Query Entries"       "q" #'org-ql-search))
   (:prefix ("c" . "clock")
-   :desc "Clock In"             :n "i" #'org-clock-in
-   :desc "Clock Out"            :n "o" #'org-clock-out
-   :desc "Clock In Last"        :n "I" #'org-clock-in-last
-   :desc "Toggle last clock"    :n "l" #'+org/toggle-last-clock
-   :desc "Time Report"          :n "R" #'org-clock-report
-   :desc "Resolve Timeclocks"   :n "r" #'org-resolve-clocks
-   :desc "Goto Clock"           :n "g" #'org-clock-goto
-   :desc "Cancel Clock"         :n "c" #'org-clock-cancel
-   :desc "Evaluate Time Range"  :n "e" #'org-evaluate-time-range
-   :desc "Clock Jumplist"       :n "\\" #'my/org-clock-jumplist)
+   :desc "Clock In"                      :n "i" #'org-clock-in
+   :desc "Clock Out"                     :n "o" #'org-clock-out
+   :desc "Clock In Last"                 :n "I" #'org-clock-in-last
+   :desc "Modify Effort"                 :n "e" #'org-clock-modify-effort-estimate
+   :desc "Toggle last clock"             :n "l" #'+org/toggle-last-clock
+   :desc "Resolve Timeclocks"            :n "r" #'org-resolve-clocks
+   :desc "Time Report"                   :n "R" #'org-clock-report
+   :desc "Goto Clock"                    :n "g" #'org-clock-goto
+   :desc "Clock Jumplist"                :n "c" #'my/org-clock-jumplist)
+   :desc "Cancel Clock"                  :n "C" #'org-clock-cancel
   (:when (modulep! :tools biblio)
     :desc "Bibliographic notes"        "b"
     (cond ((modulep! :completion vertico)  #'citar-open-notes)
@@ -2012,38 +2029,30 @@ Consider adding this file to your list of agenda files so that events show up th
    (interactive "*")
    (org-set-property "REVIEWED" (format-time-string "%Y-%m-%d %H:%M:%S")))
 
- (defun my/org-add-created ()
+ (defun my/org-capture-add-created ()
    (interactive)
    (org-set-property "CREATED" (org-timestamp-translate (org-timestamp-from-time (current-time) 't 't))))
 
-
- (defun my/org-archive ()
-   (interactive)
-   (org-archive-set-tag)
-   (org-archive-subtree-default))
-
- (defun my/org-agenda-archive ()
-   (interactive)
-   (org-agenda-toggle-archive-tag)
-   (org-agenda-archive-default))
-
-
- (defun my/org-goto-project-notes-file ()
+ (defun my/org-capture-goto-project-notes-file ()
    (interactive)
    (find-file (+org-capture-project-notes-file)))
 
- (defun my/org-current-week-file ()
+ (defun my/org-capture-week-file ()
    "Return the filename of the current capture week file creating it if it doesn't exist"
    (let ((filename
           (expand-file-name (format-time-string "%Y-W%W.org") org-weekly-directory)))
         (unless (f-exists? filename) (f-touch filename))
         filename))
 
- (defun my/org-goto-current-week-file ()
+ (defun my/org-capture-goto-week-file ()
    (interactive)
-   (find-file (my/org-current-week-file)))
+   (find-file (my/org-capture-week-file)))
 
-(setq initial-buffer-choice (my/org-current-week-file))
+ (defun my/org-capture-work-file ()
+   "The file in which to place work related notes and tasks"
+   (expand-file-name "work.org" org-agenda-directory))
+
+(setq initial-buffer-choice (my/org-capture-week-file))
 
  (defun my/org-capture-template-with-timestamps (TEMPLATE)
    "Returns a function that prepends timestamps given by the user to TEMPLATE"
@@ -2055,33 +2064,13 @@ Consider adding this file to your list of agenda files so that events show up th
              (newline (when (or deadline scheduled) "\n")))
         (concat TEMPLATE deadline scheduled newline)))
 
- ;; NOTE [2024-07-02 Tue 22:17] Commented out to see if I really need any of this
- ;; (defun my/org-capture-y-n-hook (S F)
- ;;   "A template function for hooks to run in org-capture-before-finalize that
- ;;   asks a yes or no question S if the capture wasn't aborted and conditionally executes F"
- ;;   (when (and (not org-note-abort) (y-or-n-p S)) (funcall-interactively F 'nil)))
-
- ;; (defun my/org-set-scheduled ()
- ;;   (my/org-capture-y-n-hook "Scheduled?" #'org-schedule))
-
- ;; (defun my/org-set-deadline ()
- ;;   (my/org-capture-y-n-hook "Deadline?" #'org-deadline))
-
- ;; (defun my/org-set-todo ()
- ;;   (my/org-capture-y-n-hook "Edit Todo State?" #'org-todo))
-
- ;; (defun my/org-set-tags ()
- ;;   (my/org-capture-y-n-hook "Edit Tags?" #'org-set-tags-command))
-
- ;; (defun my/org-set-priority ()
- ;;   (my/org-capture-y-n-hook "Edit Priority?" #'org-priority))
-
   (setq
+        org-pomodoro-manual-break 't
         org-crypt-tag-matcher "CRYPT"
         org-attach-auto-tag nil
         org-archive-subtree-add-inherited-tags 't
         org-archive-mark-done 'nil
-        org-archive-location "./archive/archive_%s::"
+        org-archive-location "./archive/%s.archive::"
         org-directory (file-truename "~/org/")
         org-plantuml-jar-path  "/usr/local/Cellar/plantuml/1.2023.13/libexec/plantuml.jar"
         org-log-done 'time)
@@ -2121,12 +2110,11 @@ Consider adding this file to your list of agenda files so that events show up th
  (setq
         org-todo-keywords '((sequence "TODO(t)" "HOLD(h!/!)" "|" "DONE(d!)" "KILL(k!)"))
         org-log-refile 'time
-        org-log-refile 'time
+        org-log-done 'time
         org-log-reschedule 'time
         org-log-redeadline 'time
         org-log-done-with-time 't
-        org-log-note-clock-out 't
-        org-log-done 'note
+        org-log-note-clock-out 'nil
         org-log-into-drawer t
         org-todo-repeat-to-state 't
         org-file-exclude-regexp
@@ -2135,21 +2123,27 @@ Consider adding this file to your list of agenda files so that events show up th
 
  (setq org-capture-templates
        '(("x" "Quick" entry
-          (file my/org-current-week-file)
+          (file my/org-capture-week-file)
           "* %i%? \n"
           :prepend 't
-          :prepare-finalize my/org-add-created)
+          :prepare-finalize my/org-capture-add-created)
+        ("w" "Work" entry
+         (file my/org-capture-work-file)
+         "* %i%? :Work:\n"
+         :prepend 't
+         :prepare-finalize my/org-capture-add-created)
         ("r" "Review" entry
-         (file my/org-current-week-file)
+         (file my/org-capture-week-file)
          "* TODO Review %a%? :INBOX:Review:\n"
          :prepend 't
-         :prepare-finalize my/org-add-created
+         :prepare-finalize my/org-capture-add-created
          :immediate-finish 't)
         ("c" "Clock-In New Task" entry
-          (file my/org-current-week-file)
+          (file my/org-capture-week-file)
           "* TODO %i%? \n"
           :prepend 't
-          :prepare-finalize my/org-add-created
+          :prepare-finalize my/org-capture-add-created
+          :clock-keep t
           :clock-in t)
         ("p" "Project-local")
         ("pt" "Project-local Todo" entry (file +org-capture-project-notes-file) "* TODO %? :INBOX:\n%i\n%a"
@@ -2170,7 +2164,9 @@ Consider adding this file to your list of agenda files so that events show up th
   (org-super-agenda-mode)
 
   (setq org-super-agenda-header-map (make-sparse-keymap)
-        org-agenda-files (list org-agenda-directory org-weekly-directory))
+        org-agenda-files (directory-files-recursively org-agenda-directory "\\.org$"))
+
+  (add-hook! 'evil-org-agenda-mode-hook #'org-save-all-org-buffers)
 
   (defun my/org-agenda-id-get-create ()
     (interactive)
@@ -2398,30 +2394,34 @@ Consider adding this file to your list of agenda files so that events show up th
   )
 #+end_src
 
-*** TODO NotDeft
-#+begin_src emacs-lisp :tangle config.el
-;; (after! deft
-;;     (setq
-;;         deft-directory org-directory
-;;         deft-recursive t
-;;         deft-ignore-file-regexp org-file-exclude-regexp
-;;         deft-strip-summary-regexp
-;;         (concat "\\("
-;;             "^:.+:.*\n" ; any line with a :SOMETHING:
-;;             "\\|^#\\+.*\n" ; anyline starting with a #+
-;;             "\\|^\\*.+.*\n" ; anyline where an asterisk starts the line
-;;             "\\)"))
-;;     (advice-add 'deft-parse-title :override
-;;         (lambda (file contents)
-;;          (if deft-use-filename-as-title
-;;           (deft-base-filename file)
-;;           (let* ((case-fold-search 't)
-;;                  (begin (string-match "title: " contents))
-;;                  (end-of-begin (match-end 0))
-;;                  (end (string-match "\n" contents begin)))
-;;            (if begin
-;;                (substring contents end-of-begin end)
-;;                (format "%s" file)))))))
+*** Archive :ARCHIVE:
+**** TODO NotDeft
+:PROPERTIES:
+:ARCHIVE_TIME: 2024-07-19 Fri 11:12
+:END:
+#+begin_src emacs-lisp :tangle no
+ (after! deft
+     (setq
+         deft-directory org-directory
+         deft-recursive t
+         deft-ignore-file-regexp org-file-exclude-regexp
+         deft-strip-summary-regexp
+         (concat "\\("
+             "^:.+:.*\n" ; any line with a :SOMETHING:
+             "\\|^#\\+.*\n" ; anyline starting with a #+
+             "\\|^\\*.+.*\n" ; anyline where an asterisk starts the line
+             "\\)"))
+     (advice-add 'deft-parse-title :override
+         (lambda (file contents)
+          (if deft-use-filename-as-title
+           (deft-base-filename file)
+           (let* ((case-fold-search 't)
+                  (begin (string-match "title: " contents))
+                  (end-of-begin (match-end 0))
+                  (end (string-match "\n" contents begin)))
+            (if begin
+                (substring contents end-of-begin end)
+                (format "%s" file)))))))
 #+end_src
 
 ** Latex support
