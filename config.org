@@ -1,3 +1,7 @@
+:PROPERTIES:
+:header-args: :comments both
+:END:
+
 #+Title: Doom Emacs Configuration
 * Introduction
 This is my [[https:github.com/doomemacs/doomemacs][Doom Emacs]] configuration it has taken heavy inspiration from multiple
@@ -56,9 +60,6 @@ installing doom and various other information about the file.
 ;;      Alternatively, press 'gd' (or 'C-c c d') on a module to browse its
 ;;      directory (for easy access to its source code).
 #+end_src
-
-#+RESULTS:
-
 #+html: </details>
 
 #+html: <details><summary>packages.el</summary>
@@ -205,7 +206,7 @@ but any additions I may make will be described in their own section below the
 doom block.
 #+begin_src emacs-lisp :tangle init.el :lexical t
 (setq doom-module-load-path
- '("/Users/carsonhenrich/.config/emacs/modules" "/Users/carsonhenrich/.config/doom/modules"))
+      '("/Users/carsonhenrich/.config/emacs/modules" "/Users/carsonhenrich/.config/doom/modules"))
 
 (doom! :input
        ;;chinese
@@ -213,50 +214,50 @@ doom block.
        ;;layout                                     ; auie,ctsrnm is the superior home row
 
        :completion
-       ;;(company)                        ; the ultimate code completion backend
        (corfu +dabbrev +icons +orderless)
+       (vertico +icons)                             ; the search engine of the future
+       ;;(company)                                  ; the ultimate code completion backend
        ;;helm                                       ; the *other* search engine for love and life
        ;;ido                                        ; the other *other* search engine...
        ;;ivy                                        ; a search engine for love and life
-       (vertico +icons)                             ; the search engine of the future
 
        :ui
-       ;;deft                                       ; notational velocity for Emacs
-       doom                                         ; what makes DOOM look the way it does
-       ;; doom-dashboard                            ; a nifty splash screen for Emacs
-       doom-quit                                    ; DOOM quit-message prompts when you quit Emacs
-       ;;fill-column                                ; a `fill-column' indicator
-       ;;hydra
-       hl-todo                                      ; highlight TODO/FIXME/NOTE/DEPRECATED/HACK/REVIEW
-       ;;(ligatures +fira)                            ; ligatures or substitute text with pretty symbols
-       ;;neotree                                    ; a project drawer, like NERDTree for vim
-       ;;tabs                                       ; a tab bar for Emacs
        (popup +defaults)                            ; tame sudden yet inevitable temporary windows
+       (treemacs +lsp)                              ; a project drawer, like neotree but cooler
        (vc-gutter +pretty)                          ; vcs diff in the fringe
-       ;;indent-guides                                ; highlighted indent columns
+       doom                                         ; what makes DOOM look the way it does
+       doom-dashboard                               ; a nifty splash screen for Emacs
+       doom-quit                                    ; DOOM quit-message prompts when you quit Emacs
+       hl-todo                                      ; highlight TODO/FIXME/NOTE/DEPRECATED/HACK/REVIEW
        minimap                                      ; show a map of the code on the side
        modeline                                     ; snazzy, Atom-inspired modeline, plus API
        nav-flash                                    ; blink cursor line after big motions
        ophints                                      ; highlight the region an operation acts on
-       (treemacs +lsp)                              ; a project drawer, like neotree but cooler
-       ;; unicode                                   ; extended unicode support for various languages
        vi-tilde-fringe                              ; fringe tildes to mark beyond EOB
        window-select                                ; visually switch windows
        workspaces                                   ; tab emulation, persistence & separate workspaces
        zen                                          ; distraction-free coding or writing
+       ;;unicode                                    ; extended unicode support for various languages
+       ;;(ligatures +fira)                          ; ligatures or substitute text with pretty symbols
+       ;;deft                                       ; notational velocity for Emacs
+       ;;fill-column                                ; a `fill-column' indicator
+       ;;hydra
+       ;;indent-guides                              ; highlighted indent columns
+       ;;neotree                                    ; a project drawer, like NERDTree for vim
+       ;;tabs                                       ; a tab bar for Emacs
 
        :editor
        (evil +everywhere)                           ; come to the dark side, we have cookies
        file-templates                               ; auto-snippets for empty files
        fold                                         ; (nigh) universal code folding
        format                                       ; automated prettiness
-       ;;god                                        ; run Emacs commands without modifier keys
-       ;;lispy                                      ; vim for lisp, for people who don't like vim
-       ;;objed                                      ; text object editing for the innocent
        multiple-cursors                             ; editing in many places at once
        parinfer                                     ; turn lisp into python, sort of
        rotate-text                                  ; cycle region at point between text candidates
        snippets                                     ; my elves. They type so I don't have to
+       ;;god                                        ; run Emacs commands without modifier keys
+       ;;lispy                                      ; vim for lisp, for people who don't like vim
+       ;;objed                                      ; text object editing for the innocent
        ;;word-wrap                                    ; soft wrapping with language-aware indent
 
        :emacs
@@ -267,57 +268,92 @@ doom block.
        vc                                           ; version-control and Emacs, sitting in a tree
 
        :term
-       ;;shell                                      ; simple shell REPL for Emacs
-       ;;term                                       ; basic terminal emulator for Emacs
        eshell                                       ; the elisp shell that works everywhere
        vterm                                        ; the best terminal emulation in Emacs
+       ;;shell                                      ; simple shell REPL for Emacs
+       ;;term                                       ; basic terminal emulator for Emacs
 
        :checkers
-       (syntax +flymake)                            ; tasing you for every semicolon you forgetjk
        (spell +flyspell +hunspell)                  ; tasing you for misspelling mispelling
+       (syntax +flymake)                            ; tasing you for every semicolon you forgetjk
        grammar                                      ; tasing grammar mistake every you make
 
        :tools
-       ansible
-       biblio                                       ; Writes a PhD for you (citation needed)
-       ;;collab                                     ; buffers with friends
-       ;; (debugger +lsp)
-       (debugger)
-       direnv
-       (docker +lsp)
-       ;;editorconfig                               ; let someone else argue about tabs vs spaces
-       ;;ein                                        ; tame Jupyter notebooks with emacs
+       (:if (executable-find "ansible")
+           (ansible))
+       (:if (executable-find "docker")
+           (docker +lsp))
+       (:if (executable-find "git")                 ; a git porcelain for Emacs
+           (magit +forge))
+       (:if (executable-find "make")                ; run make tasks from Emacs
+           (make))
+       (:if (executable-find "pass")                ; password manager for nerds
+           (pass +auth))
+       (:if (executable-find "terraform")           ; infrastructure as code
+           (terraform))
+       (:if (executable-find "tmux")                ; an API for interacting with tmux
+           (tmux))
        (eval +overlay)                              ; run code, run (also, repls)
        (lookup +dictionary +offline)                ; navigate your code and its documentation
        (lsp +peek)                                  ; M-x vscode
-       (:if (executable-find "git") (magit +forge)) ; a git porcelain for Emacs
-       make                                         ; run make tasks from Emacs
-       (:if (executable-find "pass") (pass +auth))  ; password manager for nerds
+       biblio                                       ; Writes a PhD for you (citation needed)
+       debugger
+       direnv
        pdf                                          ; pdf enhancements NOTE FOR MACOS https://github.com/politza/pdf-tools/issues/645#issuecomment-775496734
-       terraform                                  ; infrastructure as code
-       (:if (executable-find "tmux") (tmux))        ; an API for interacting with tmux
        tree-sitter                                  ; syntax and parsing, sitting in a tree...
        upload                                       ; map local to remote projects via ssh/ftp
+       ;; (debugger +lsp)
+       ;;collab                                     ; buffers with friends
+       ;;editorconfig                               ; let someone else argue about tabs vs spaces
+       ;;ein                                        ; tame Jupyter notebooks with emacs
 
        :os
        (:if IS-MAC macos)                           ; improve compatibility with macOS
        (tty +osc)                                   ; improve the terminal Emacs experience
 
        :lang
+       (:if (executable-find "cargo")               ; Fe2O3.unwrap().unwrap().unwrap().unwrap()
+           (rust +tree-sitter +lsp))
+       (:if (executable-find "kotlinc")             ; a better, slicker Java(Script)
+           (kotlin +lsp))
+       (:if (executable-find "nix")                 ; I hereby declare "nix geht mehr!"
+           (nix +lsp +tree-sitter))
+       (:if (executable-find "plantuml")            ; diagrams for confusing people more
+           (plantuml))
+       (:if (executable-find "go")                  ; the hipster dialect
+           (go +tree-sitter +lsp))
+       (cc +lsp)                                    ; C > C++ == 1
+       (java +lsp)                                  ; the poster child for carpal tunnel syndrome
+       (latex +latexmk +cdlatex +fold +lsp)         ; writing papers in Emacs has never been so fun
+       (lua +lsp +tree-sitter)                      ; one-based indices? one-based indices
+       (org +crypt +noter                           ; organize your plain life in plain text
+            +present +pomodoro +roam2
+            +dragndrop +pandoc)
+       (python +tree-sitter +pyright +lsp)          ; beautiful is better than ugly
+       (sh +lsp +fish +powershell)                  ; she sells {ba,z,fi}sh shells on the C xor
+       data                                         ; config/data formats
+       emacs-lisp                                   ; drown in parentheses
+       javascript                                   ; all(hope(abandon(ye(who(enter(here))))))
+       json                                         ; At least it ain't XML
+       markdown                                     ; writing docs for people to ignore
+       rest                                         ; Emacs as a REST client
+       web                                          ; the tubes
+       yaml                                         ; JSON, but readable
+       ;;(dart +flutter)                            ; paint ui and not much else
+       ;;(graphql +lsp)                             ; Give queries a REST
+       ;;(haskell +lsp)                             ; a language that's lazier than I am
+       ;;(ruby +rails)                              ; 1.step {|i| p "Ruby is #{i.even? ? 'love' : 'life'}"}
+       ;;(scheme +guile)                            ; a fully conniving family of lisps
        ;;agda                                       ; types of types of types of types...
        ;;beancount                                  ; mind the GAAP
-       (cc +lsp)                                    ; C > C++ == 1
        ;;clojure                                    ; java with a lisp
        ;;common-lisp                                ; if you've seen one lisp, you've seen them all
        ;;coq                                        ; proofs-as-programs
        ;;crystal                                    ; ruby at the speed of c
        ;;csharp                                     ; unity, .NET, and mono shenanigans
-       data                                         ; config/data formats
-       ;;(dart +flutter)                            ; paint ui and not much else
        ;;dhall
        ;;elixir                                     ; erlang done right
        ;;elm                                        ; care for a cup of TEA?
-       emacs-lisp                                   ; drown in parentheses
        ;;erlang                                     ; an elegant language for a more civilized age
        ;;ess                                        ; emacs speaks statistics
        ;;factor
@@ -326,72 +362,47 @@ doom block.
        ;;fsharp                                     ; ML stands for Microsoft's Language
        ;;fstar                                      ; (dependent) types and (monadic) effects and Z3
        ;;gdscript                                   ; the language you waited for
-       (go +tree-sitter +lsp)                                  ; the hipster dialect
-       ;;(graphql +lsp)                             ; Give queries a REST
-       ;;(haskell +lsp)                             ; a language that's lazier than I am
        ;;hy                                         ; readability of scheme w/ speed of python
        ;;idris                                      ; a language you can depend on
-       json                                         ; At least it ain't XML
-       (java +lsp)                                  ; the poster child for carpal tunnel syndrome
-       javascript                                   ; all(hope(abandon(ye(who(enter(here))))))
        ;;julia                                      ; a better, faster MATLAB
-       (kotlin +lsp)                                     ; a better, slicker Java(Script)
-       (latex +latexmk +cdlatex +fold +lsp)         ; writing papers in Emacs has never been so fun
        ;;lean                                       ; for folks with too much to prove
        ;;ledger                                     ; be audit you can be
-       (lua +lsp +tree-sitter)                      ; one-based indices? one-based indices
-       markdown                                     ; writing docs for people to ignore
        ;;nim                                        ; python + lisp at the speed of c
-       (nix +lsp +tree-sitter)                      ; I hereby declare "nix geht mehr!"
        ;;ocaml                                      ; an objective camel
-       (org +crypt +noter                           ; organize your plain life in plain text
-            +present +pomodoro +roam2
-            +dragndrop +pandoc)
        ;;php                                        ; perl's insecure younger brother
-       plantuml                                     ; diagrams for confusing people more
        ;;purescript                                 ; javascript, but functional
-       (python +tree-sitter +pyright +lsp)          ; beautiful is better than ugly
        ;;qt                                         ; the 'cutest' gui framework ever
        ;;racket                                     ; a DSL for DSLs
        ;;raku                                       ; the artist formerly known as perl6
-       rest                                         ; Emacs as a REST client
        ;;rst                                        ; ReST in peace
-       ;;(ruby +rails)                              ; 1.step {|i| p "Ruby is #{i.even? ? 'love' : 'life'}"}
-       (rust +tree-sitter +lsp)                                  ; Fe2O3.unwrap().unwrap().unwrap().unwrap()
        ;;scala                                      ; java, but good
-       ;;(scheme +guile)                           ; a fully conniving family of lisps
-       (sh +lsp +fish +powershell)                  ; she sells {ba,z,fi}sh shells on the C xor
        ;;sml
        ;;solidity                                   ; do you need a blockchain? No.
        ;;swift                                      ; who asked for emoji variables?
        ;;terra                                      ; Earth and Moon in alignment for performance.
-       web                                          ; the tubes
-       yaml                                         ; JSON, but readable
        ;;zig                                        ; C, but simpler
 
        :email
+       (:if (executable-find "mu") (mu4e +org +gmail))
        ;;(:if (executable-find "notmuch") (notmuch +org +afew))
-       (:if (modulep! :my_tools mail)  (mu4e +org +gmail))
        ;;(wanderlust +gmail)
 
        :app
+       (rss +org)                                   ; emacs as an RSS reader
        calendar
        emms
        everywhere                                   ; *leave* Emacs!? You must be joking
        irc                                          ; how neckbeards socialize
-       (rss +org)                                   ; emacs as an RSS reader
        ;;twitter                                    ; twitter client https://twitter.com/vnought
 
        :config
+       (default +smartparens +evil +evil-bindings)
        ;;literate
-       (default +smartparens)
 
-      
+
        :my_lang
        (org +roam +roam-ui +noter +pretty +query +present +hugo)
-       :my_tools
-       mail)
-
+       (:if (modulep! :email mu4e)  :my_tools mail))
 #+end_src
 
 ** Template
@@ -614,6 +625,7 @@ Doom’s unit tests go here. More information on them to come…
 #+end_src
 
 **** Flags
+#+name: modules-load_flags
 #+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/config.el :lexical t
   (dolist (flag (doom-module-context-get :flags))
     (load! (concat "flags/" (substring (symbol-name flag) 1)) nil t))
@@ -622,7 +634,6 @@ Doom’s unit tests go here. More information on them to come…
 ***** +{FLAG}
 #+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/flags/{FLAG}.el :lexical t
 #+end_src
-
 
 **** Additional Files
 Use for whatever purpose you wish
@@ -662,28 +673,32 @@ Install packages required by this module according to other modules and flags se
 (package! ob-mermaid)
 (package! engrave-faces)
 (package! org-super-agenda)
+(package! org-pandoc-import
+  :recipe (:host github
+           :repo "tecosaur/org-pandoc-import"
+           :files ("*.el" "filters" "preprocessors")))
 (when (modulep! :lang kotlin) (package! ob-kotlin))
-(when (modulep! +pretty)
-  <<modules-my_lang-org-pretty-packages>>)
-(when (modulep! +hugo)
-  <<modules-my_lang-org-hugo-packages>>)
-(when (modulep! +present)
-  <<modules-my_lang-org-present-packages>>)
-(when (modulep! +query)
-  <<modules-my_lang-org-query-packages>>)
-(when (modulep! +roam)
-  <<modules-my_lang-org-roam-packages>>)
-(when (modulep! +roam-ui)
-  <<modules-my_lang-org-roam-ui-packages>>)
 #+end_src
 
 **** Configuration
 #+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :noweb yes :lexical t
-<<use_org>>
-<<use_org-super-agenda>>
+<<modules-my_lang-org-config>>
+<<modules-my_lang-org-use-packages>>
+<<modules-load_flags>>
 #+end_src
 
-***** Org
+***** General Config
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-config
+:END:
+#+begin_src emacs-lisp
+
+#+end_src
+***** Use Packages
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-use-packages
+:END:
+****** Org
 #+name:use_org
 #+begin_src emacs-lisp :noweb yes
 (use-package! org
@@ -694,7 +709,7 @@ Install packages required by this module according to other modules and flags se
   :config
   <<org-config>>)
 #+end_src
-****** Config
+******* Config
 :PROPERTIES:
 :header-args:      :noweb-ref org-config
 :END:
@@ -702,7 +717,7 @@ Some general org mode configuration
 #+begin_src emacs-lisp
 (setq
  org-directory (file-truename "~/org/")
- org-insert-heading-respect-content 'nil
+ org-insert-heading-respect-content 't
  org-catch-invisible-edits 'show-and-error
  org-crypt-tag-matcher "CRYPT"
  org-attach-auto-tag nil)
@@ -728,7 +743,53 @@ Have emails that I create tasks out of go into ~email.org~
   (setq +org-capture-emails-file (expand-file-name  "email.org" org-agenda-directory)))
 #+end_src
 
-******* Clock and Logging
+******** Appearance
+Org styling, hide markup etc.
+#+begin_src emacs-lisp
+(setq
+ org-auto-align-tags t
+ org-tags-column 0
+ org-ellipsis "…"
+ org-cycle-inline-images-display 't
+ org-startup-with-latex-preview 't
+ org-startup-folded 't
+ org-hide-emphasis-markers t
+ org-pretty-entities t)
+#+end_src
+
+Setup configuration for exporting highlighted code blocks
+#+begin_src emacs-lisp
+(setq org-latex-src-block-backend 'engraved
+      org-latex-engraved-theme    't)
+#+end_src
+
+Enable word count in modes listed in ~doom-modeline-continuous-word-count-modes~
+#+begin_src emacs-lisp
+(setq doom-modeline-enable-word-count 't)
+#+end_src
+
+Allow for mixed pitch fonts in buffers
+#+begin_src emacs-lisp
+(add-hook! 'org-mode-hook #'mixed-pitch-mode)
+(add-hook! 'org-mode-hook #'solaire-mode)
+(setq mixed-pitch-variable-pitch-cursor nil)
+#+end_src
+
+Make sure certain org faces use the fixed-pitch face when ~variable-pitch-mode~ is on
+#+begin_src emacs-lisp
+(require 'org-faces)
+(set-face-attribute 'org-ellipsis nil :inherit 'default :box nil)
+(set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
+(set-face-attribute 'org-table nil :inherit 'fixed-pitch)
+(set-face-attribute 'org-formula nil :inherit 'fixed-pitch)
+(set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
+(set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
+(set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch)
+
+(when (display-graphic-p)
+  (require 'all-the-icons))
+#+end_src
+******** Clock and Logging
 Convenience function for selecting a clock to jump to
 #+begin_src emacs-lisp
 (defun my/org-clock-jumplist ()
@@ -777,7 +838,7 @@ having the timer start, to give me a chance to finish things up.
 (when (modulep! :lang org +pomodoro) (setq org-pomodoro-manual-break 't))
 #+end_src
 
-******* Agenda and Capture
+******** Agenda and Capture
 Set some general configuration for the org agenda
 #+begin_src emacs-lisp
 (setq
@@ -895,7 +956,7 @@ Save all org buffers when entering or leaving the agenda
 (add-hook! 'evil-org-agenda-mode-hook #'org-save-all-org-buffers)
 #+end_src
 
-******* Babel
+******** Babel
 Setup the default header args for code blocks I prefer that ~RESULT~ blocks don't
 end up cluttering my notes so I set that to silent and then by default allow for
 using ~noweb~ syntax.
@@ -905,7 +966,7 @@ using ~noweb~ syntax.
    (:noweb . "yes") (:hlines . "no") (:tangle . "no")))
 #+end_src
 
-****** Keymaps
+******* Keymaps
 :PROPERTIES:
 :header-args:      :noweb-ref org-keymaps
 :END:
@@ -917,7 +978,23 @@ Make switching between visible heading a bit easier
  :desc "Move to Previous Visible Heading"  :n "[ h" #'org-previous-visible-heading)
 #+end_src
 
+Fix issue with snippets in org-mode
 #+begin_src emacs-lisp
+(map! :after evil-org
+      :map evil-org-mode-map
+      :i "C-n" #'yas-next-field
+      :i "C-p" #'yas-prev-field)
+#+end_src
+I need to override what this is set to by doom emacs because it simply doesn't
+make sense for my workflow.
+#+begin_src emacs-lisp
+(map!
+ :after org
+ :map org-mode-map
+ :localleader
+ :n "n" 'nil
+ :desc "Add Note"                       :n "n" #'org-add-note)
+
 (map!
  :map org-mode-map
  :localleader
@@ -927,7 +1004,6 @@ Make switching between visible heading a bit easier
  :desc "Encrypt"                        :n "E" #'org-encrypt-entry
  :desc "Remove Result"                  :n "u" #'org-babel-remove-result
  :desc "Remove Result Blocks"           :n "U" #'+org/remove-result-blocks
- :desc "Add Note"                       :n "n" #'org-add-note
  :desc "Org export to clipboard"        :n "y" #'+org/export-to-clipboard
  :desc "Org export to clipboard as RTF" :n "Y" #'+org/export-to-clipboard-as-rich-text)
 #+end_src
@@ -954,6 +1030,14 @@ Make switching between visible heading a bit easier
  :desc "Goto Clock"                    :n "g" #'org-clock-goto
  :desc "Clock Jumplist"                :n "c" #'my/org-clock-jumplist
  :desc "Cancel Clock"                  :n "C" #'org-clock-cancel)
+#+end_src
+
+#+begin_src emacs-lisp
+(map!
+ :map org-mode-map
+ :localleader
+ :prefix ("l" . "links")
+ :desc "Insert roam link"                  :n "r" #'org-roam-node-insert)
 #+end_src
 
 #+begin_src emacs-lisp
@@ -987,7 +1071,7 @@ Make switching between visible heading a bit easier
  :desc "Set Priority"         :n "p" #'org-priority)
 #+end_src
 
-******* Global Org Mappings
+******** Global Org Mappings
 #+begin_src emacs-lisp
 (map!
  :leader
@@ -1001,6 +1085,7 @@ Make switching between visible heading a bit easier
  :desc "Browse notes"                 "F" #'+default/browse-notes
  :desc "Tags search"                  "m" #'org-tags-view
  :desc "Org capture"                  "n" #'org-capture
+ :desc "Store Link"                  "l" #'org-store-link
  :desc "Goto capture"                 "N" #'org-capture-goto-target
  :desc "Active org-clock"             "o" #'org-clock-goto
  :desc "Todo list"                    "T" #'org-todo-list
@@ -1044,7 +1129,7 @@ Make switching between visible heading a bit easier
   :desc "Cancel Clock"                  :n "C" #'org-clock-cancel))
 #+end_src
 
-******* Org Agenda Mappings
+******** Org Agenda Mappings
 #+begin_src emacs-lisp
 (map! :leader
       :desc "My Agenda" :n "\\" #'my/org-agenda)
@@ -1053,7 +1138,7 @@ Make switching between visible heading a bit easier
       :desc "Add Id" :n "I" #'my/org-agenda-id-get-create)
 #+end_src
 
-***** Org Super Agenda
+****** Org Super Agenda
 #+name: use_org-super-agenda
 #+begin_src emacs-lisp :noweb yes
 (use-package! org-super-agenda
@@ -1066,7 +1151,7 @@ Make switching between visible heading a bit easier
   :config
   <<org-super-agenda-config>>)
 #+end_src
-****** Config
+******* Config
 :PROPERTIES:
 :header-args: :noweb-ref org-super-agenda-config
 :END:
@@ -1131,79 +1216,89 @@ Custom commands for displaying the agenda
 #+end_src
 
 **** Flags
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(dolist (flag (doom-module-context-get :flags))
-  (load! (concat "flags/" (substring (symbol-name flag) 1)) nil t))
-#+end_src
 ***** +pretty
+~use-package!~ from in the [[Use Packages]] section and other general flag [[Config]]
 #+begin_src emacs-lisp :tangle modules/my_lang/org/flags/pretty.el :lexical t :noweb yes
 ;;;###if (modulep! +pretty)
-<<use_org-modern>>
+<<modules-my_lang-org-pretty-config>>
+<<modules-my_lang-org-pretty-use-packages>>
 #+end_src
 
-****** Packages
-:PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-pretty-packages
-:END:
-#+begin_src emacs-lisp
-(package! org-modern)
+Packages included with this flag
+#+begin_src emacs-lisp :tangle modules/my_lang/org/packages.el :noweb yes :lexical t
+(when (modulep! +pretty)
+  (package! org-modern))
 #+end_src
-****** Org-Modern
-#+name: use_org-modern
+****** Config
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-pretty-config
+:END:
+****** Use Packages
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-pretty-use-packages
+:END:
+******* Org-Modern
 #+begin_src emacs-lisp :noweb yes
 (use-package! org-modern
   :init
-  (list
-    <<modules-my_lang-org-modern-keymaps>>
-    )
+  <<org-modern-keymaps>>
   :config
-  <<modules-my_lang-org-modern-config>>)
+  <<org-modern-config>>)
 #+end_src
-
-******* Config
+******** Config
 :PROPERTIES:
-:header-args:      :noweb-ref modules-my_lang-org-modern-config
+:header-args:      :noweb-ref org-modern-config
 :END:
 #+begin_src emacs-lisp
-(setq global-org-modern-mode t)
+(global-org-modern-mode)
+(add-hook! org-agenda-finalize-hook #'org-modern-agenda)
 #+end_src
-******* Keymaps
+******** Keymaps
 :PROPERTIES:
-:header-args:      :noweb-ref modules-my_lang-org-modern-keymaps
+:header-args:      :noweb-ref org-modern-keymaps
 :END:
+
 ***** +noter
+~use-package!~ from in the  [[Use Packages]] section and other general flag [[Config]]
 #+begin_src emacs-lisp :tangle modules/my_lang/org/flags/noter.el :lexical t :noweb yes
 ;;;###if (modulep! +noter)
-<<use_org-noter>>
+<<modules-my_lang-org-noter-config>>
+<<modules-my_lang-org-noter-use-packages>>
 #+end_src
+
+Packages included with this flag
+#+begin_src emacs-lisp :tangle modules/my_lang/org/packages.el :noweb yes :lexical t
+(when (modulep! +noter)
+  (package! org-noter))
+#+end_src
+
 ****** Checks
 #+begin_src emacs-lisp :tangle modules/my_lang/org/doctor.el
 (when (and (modulep! +noter) (not (modulep! :lang org +noter))
   (warn! "The :my_lang org +noter flag is intended to be used with :lang org +noter, not doing so is undefined behavior")
 #+end_src
-****** Packages
+****** Config
 :PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-noter-packages
+:header-args: :noweb-ref modules-my_lang-org-noter-config
 :END:
-#+begin_src emacs-lisp
-(package! org-noter)
-#+end_src
-
-****** Org-Noter
-#+name: use_org-noter
+****** Use Packages
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-noter-use-packages
+:END:
+******* Org-Noter
 #+begin_src emacs-lisp :noweb yes
 (use-package! org-noter
   :defer t
   :init
   (list
-    <<modules-my_lang-org-noter-keymaps>>
+    <<org-noter-keymaps>>
     )
   :config
-  <<modules-my_lang-org-noter-config>>)
+  <<org-noter-config>>)
 #+end_src
-******* Config
+******** Config
 :PROPERTIES:
-:header-args:      :noweb-ref modules-my_lang-org-noter-config
+:header-args:      :noweb-ref org-noter-config
 :END:
 #+begin_src emacs-lisp :results silent
 (setq org-noter-notes-search-path
@@ -1213,9 +1308,9 @@ Custom commands for displaying the agenda
 (org-noter-enable-org-roam-integration)
 (org-noter-enable-update-renames)
 #+end_src
-******* Keymaps
+******** Keymaps
 :PROPERTIES:
-:header-args:      :noweb-ref modules-my_lang-org-noter-keymaps
+:header-args:      :noweb-ref org-noter-keymaps
 :END:
 #+begin_src emacs-lisp :tangle no
 (map!
@@ -1244,40 +1339,46 @@ Custom commands for displaying the agenda
   :desc "Goto prev page with notes"   "k" #'org-noter-sync-prev-page-or-chapter)
 #+end_src
 ***** +roam
+~use-package!~ from in the [[Use Packages]] section and other general flag [[Config]]
 #+begin_src emacs-lisp :tangle modules/my_lang/org/flags/roam.el :lexical t :noweb yes
 ;;;###if (modulep! +roam)
-<<use_org-roam>>
+<<modules-my_lang-org-roam-config>>
+<<modules-my_lang-org-roam-use-packages>>
 #+end_src
+
+Packages included with this flag
+#+begin_src emacs-lisp :tangle modules/my_lang/org/packages.el :noweb yes :lexical t
+(when (modulep! +roam)
+  (package! org-roam))
+  #+end_src
 
 ****** Checks
 #+begin_src emacs-lisp :tangle modules/my_lang/org/doctor.el
 (when (and (modulep! +roam) (not (modulep! :lang org +roam2))
   (warn! "The :my_lang org +roam flag is intended to be used with :lang org +roam2, not doing so is undefined behavior")
 #+end_src
-
-****** Packages
+****** Config
 :PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-roam-packages
+:header-args: :noweb-ref modules-my_lang-org-roam-config
 :END:
-#+begin_src emacs-lisp
-(package! org-roam)
-#+end_src
-
-****** Org-Roam
-#+name: use_org-roam
+****** Use Packages
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-roam-use-packages
+:END:
+******* Org-Roam
 #+begin_src emacs-lisp :noweb yes
 (use-package! org-roam
   :after org
   :init
   (list
-    <<modules-my_lang-org-roam-keymaps>>
+    <<org-roam-keymaps>>
     )
   :config
-  <<modules-my_lang-org-roam-config>>)
+  <<org-roam-config>>)
 #+end_src
-******* Config
+******** Config
 :PROPERTIES:
-:header-args:      :noweb-ref modules-my_lang-org-roam-config
+:header-args:      :noweb-ref org-roam-config
 :END:
 #+begin_src emacs-lisp
 (setq org-roam-directory (expand-file-name org-directory "roam/")
@@ -1302,9 +1403,9 @@ Custom commands for displaying the agenda
 (add-hook 'org-capture-prepare-finalize-hook 'nom/org-roam-capture-create-id)
 (require 'org-roam-export)
 #+end_src
-******* Keymaps
+******** Keymaps
 :PROPERTIES:
-:header-args:      :noweb-ref modules-my_lang-org-roam-keymaps
+:header-args:      :noweb-ref org-roam-keymaps
 :END:
 #+begin_src emacs-lisp
 (map!
@@ -1344,25 +1445,34 @@ Custom commands for displaying the agenda
 #+end_src
 
 ***** +roam-ui
+~use-package!~ from in the [[Use Packages]] section and other general flag [[Config]]
 #+begin_src emacs-lisp :tangle modules/my_lang/org/flags/roam-ui.el :lexical t :noweb yes
-<<use_org-roam-ui>>
-<<use_websocket>>
+;;;###if (modulep! +roam-ui)
+<<modules-my_lang-org-roam-ui-config>>
+<<modules-my_lang-org-roam-ui-use-packages>>
 #+end_src
-****** Packages
-:PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-roam-ui-packages
-:END:
-#+begin_src emacs-lisp
-(package! org-roam-ui)
-(unpin! org-roam)
+
+Packages included with this flag
+#+begin_src emacs-lisp :tangle modules/my_lang/org/packages.el :noweb yes :lexical t
+(when (modulep! +roam-ui)
+  (package! org-roam-ui)
+  (unpin! org-roam))
 #+end_src
+
 ****** Checks
 #+begin_src emacs-lisp :tangle modules/my_lang/org/doctor.el
 (when (and (modulep! +roam-ui) (not (modulep! +roam))
   (error! "You are using the roam-ui flag without the roam flag, this is undefined behavior")
 #+end_src
-****** Org-Roam-UI
-#+name: use_org-roam-ui
+****** Config
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-roam-ui-config
+:END:
+****** Use Packages
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-roam-ui-use-packages
+:END:
+******* Org-Roam-UI
 #+begin_src emacs-lisp :noweb yes
 (use-package! org-roam-ui
   :after org-roam ;; or :after org
@@ -1377,11 +1487,11 @@ Custom commands for displaying the agenda
   :config
   <<org-roam-ui-config>>)
 #+end_src
-******* Keymaps
+******** Keymaps
 :PROPERTIES:
 :header-args: :noweb-ref org-roam-ui-keymaps
 :END:
-******* Config
+******** Config
 :PROPERTIES:
 :header-args: :noweb-ref org-roam-ui-config
 :END:
@@ -1391,48 +1501,55 @@ Custom commands for displaying the agenda
       org-roam-ui-update-on-save t
       org-roam-ui-open-on-start t)
 #+end_src
-****** Websocket
+******* Websocket
 #+name:use_websocket
 #+begin_src emacs-lisp :noweb yes
 (use-package! websocket
     :after org-roam)
 #+end_src
 ***** +query
+~use-package!~ from in the [[Use Packages]] section and other general flag [[Config]]
 #+begin_src emacs-lisp :tangle modules/my_lang/org/flags/query.el :lexical t :noweb yes
 ;;;###if (modulep! +query)
-<<use_org-ql>>
-<<use_org-roam-ql>>
-<<use_org-roam-ql-ql>>
+<<modules-my_lang-org-query-config>>
+<<modules-my_lang-org-query-use-packages>>
 #+end_src
-****** Packages
+
+Packages included with this flag
+#+begin_src emacs-lisp :tangle modules/my_lang/org/packages.el :noweb yes :lexical t
+(when (modulep! +query)
+  (package! org-ql)
+  (when (modulep! +roam)
+    (package! org-roam-ql)
+    (package! org-roam-ql-ql)))
+  #+end_src
+
+****** Config
 :PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-query-packages
+:header-args: :noweb-ref modules-my_lang-org-query-config
 :END:
-#+begin_src emacs-lisp :noweb yes
-(package! org-ql)
-(when (modulep! +roam)
-  (package! org-roam-ql)
-  (package! org-roam-ql-ql))
-#+end_src
-****** Org-ql
-#+name: use_org-ql
+****** Use Packages
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-query-use-packages
+:END:
+******* Org-ql
 #+begin_src emacs-lisp
 (use-package! org-ql
   :defer t
   :init
   (list
-    <<modules-my_lang-org-ql-keymaps>>
+    <<org-ql-keymaps>>
     )
   :config
-  <<modules-my_lang-org-ql-config>>)
+  <<org-ql-config>>)
 #+end_src
-******* Config
+******** Config
 :PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-ql-config
+:header-args: :noweb-ref org-ql-config
 :END:
-******* Keymaps
+******** Keymaps
 :PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-ql-keymaps
+:header-args: :noweb-ref org-ql-keymaps
 :END:
 #+begin_src emacs-lisp
 (map!
@@ -1444,25 +1561,24 @@ Custom commands for displaying the agenda
   :desc "Query Entries"       "q" #'org-ql-search))
 #+end_src
 
-****** Org-roam-ql
-#+name: use_org-roam-ql
+******* Org-roam-ql
 #+begin_src emacs-lisp
 (use-package! org-roam-ql
   :defer t
   :init
   (list
-    <<modules-my_lang-org-roam-ql-keymaps>>
+    <<org-roam-ql-keymaps>>
     )
   :config
-  <<modules-my_lang-org-roam-ql-config>>)
+  <<org-roam-ql-config>>)
 #+end_src
-******* Config
+******** Config
 :PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-roam-ql-config
+:header-args: :noweb-ref org-roam-ql-config
 :END:
-******* Keymaps
+******** Keymaps
 :PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-roam-ql-keymaps
+:header-args: :noweb-ref org-roam-ql-keymaps
 :END:
 #+begin_src emacs-lisp
 (map!
@@ -1475,53 +1591,62 @@ Custom commands for displaying the agenda
  :desc "Query Nodes"     "q" #'org-roam-ql-search)
 #+end_src
 
-****** Org-roam-ql-ql
-#+name: use_org-roam-ql-ql
+******* Org-roam-ql-ql
 #+begin_src emacs-lisp
 (use-package! org-roam-ql-ql
   :defer t
   :init
   (list
-    <<modules-my_lang-org-roam-ql-ql-keymaps>>
+    <<org-roam-ql-ql-keymaps>>
     )
   :config
-  <<modules-my_lang-org-roam-ql-ql-config>>)
+  <<org-roam-ql-ql-config>>)
 #+end_src
-******* Config
+******** Config
 :PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-roam-ql-ql-config
+:header-args: :noweb-ref org-roam-ql-ql-config
 :END:
-******* Keymaps
+******** Keymaps
 :PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-roam-ql-ql-keymaps
+:header-args: :noweb-ref org-roam-ql-ql-keymaps
 :END:
+
 ***** +present
+~use-package!~ from in the [[Use Packages]] section and other general flag [[Config]]
 #+begin_src emacs-lisp :tangle modules/my_lang/org/flags/present.el :lexical t :noweb yes
 ;;;###if (modulep! +present)
-<<use_org-present>>
+<<modules-my_lang-org-present-config>>
+<<modules-my_lang-org-present-use-packages>>
 #+end_src
-****** Packages
+
+Packages included with this flag
+#+begin_src emacs-lisp :tangle modules/my_lang/org/packages.el :noweb yes :lexical t
+(when (modulep! +present)
+  (package! org-present))
+  #+end_src
+
+****** Config
 :PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-present-packages
+:header-args: :noweb-ref modules-my_lang-org-present-config
 :END:
-#+begin_src emacs-lisp
-(package! org-present)
-#+end_src
-****** Org-present
-#+name: use_org-present
+****** Use Packages
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-present-use-packages
+:END:
+******* Org-present
 #+begin_src emacs-lisp :lexical t :noweb yes
 (use-package! org-present
   :defer t
   :init
   (list
-    <<modules-my_lang-org-present-keymaps>>
+    <<org-present-keymaps>>
     )
   :config
-  <<modules-my_lang-org-present-config>>)
+  <<org-present-config>>)
 #+end_src
-******* Config
+******** Config
 :PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-present-config
+:header-args: :noweb-ref org-present-config
 :END:
 #+begin_src emacs-lisp
 ;; Configure fill width
@@ -1612,9 +1737,9 @@ Custom commands for displaying the agenda
 (add-hook 'org-present-mode-hook 'my/org-present-start)
 (add-hook 'org-present-mode-quit-hook 'my/org-present-end)
 #+end_src
-******* Keymaps
+******** Keymaps
 :PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-present-keymaps
+:header-args: :noweb-ref org-present-keymaps
 :END:
 #+begin_src emacs-lisp
 (map!
@@ -1624,38 +1749,48 @@ Custom commands for displaying the agenda
  :niv "s-[" #'my/org-present-prev
  :niv "s-]" #'my/org-present-next)
 #+end_src
+
 ***** +hugo
-#+begin_src emacs-lisp :lexical t :noweb yes
+~use-packages!~ from in the [[Use Packages]] section and other general flag [[Config]]
+#+begin_src emacs-lisp :tangle modules/my_lang/org/flags/hugo.el :lexical t :noweb yes
 ;;;###if (modulep! +hugo)
-<<use_ox-hugo>>
+<<modules-my_lang-org-hugo-config>>
+<<modules-my_lang-org-hugo-use-packages>>
 #+end_src
 
-****** Packages
+Packages included with this flag
+#+begin_src emacs-lisp :tangle modules/my_lang/org/packages.el :noweb yes :lexical t
+(when (modulep! +hugo)
+  (package! ox-hugo))
+  #+end_src
+
+****** Config
 :PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-hugo-packages
+:header-args: :noweb-ref modules-my_lang-org-hugo-config
 :END:
-#+begin_src emacs-lisp
-(package! ox-hugo)
-#+end_src
-****** Ox-hugo
-#+name: use_ox-hugo
+****** Use Packages
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-hugo-use-packages
+:END:
+
+******* Ox-hugo
 #+begin_src emacs-lisp :noweb yes
 (use-package! ox-hugo
   :after ox
   :init
   (list
-    <<modules-my_lang-ox-hugo-keymaps>>
+    <<ox-hugo-keymaps>>
     )
   :config
-  <<modules-my_lang-ox-hugo-config>>)
+  <<ox-hugo-config>>)
     #+end_src
-******* Config
+******** Config
 :PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-ox-hugo-config
+:header-args: :noweb-ref ox-hugo-config
 :END:
-******* Keymaps
+******** Keymaps
 :PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-ox-hugo-keymaps
+:header-args: :noweb-ref ox-hugo-keymaps
 :END:
 ***** Archive :ARCHIVE:
 ****** TODO NotDeft
@@ -1686,6 +1821,7 @@ Custom commands for displaying the agenda
                 (substring contents end-of-begin end)
                 (format "%s" file)))))))
 #+end_src
+
 *** TODO SQL
 #+begin_src emacs-lisp :tangle packages.el
 (package! sql-indent)
@@ -2078,7 +2214,6 @@ This is where packages not included in modules are placed to install them.
 (package! whisper
   :recipe (:host github :repo "natrys/whisper.el" :files ("*.el")))
 #+end_src
-
 * Configuration
 ** General
   #+begin_src emacs-lisp :tangle config.el :lexical t

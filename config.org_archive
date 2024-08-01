@@ -33,3 +33,27 @@ Archived entries from file /Users/carsonhenrich/.config/doom/config.org
   ;; use the view command named "Zathura" for pdf output
   (setcdr (assq 'output-pdf TeX-view-program-selection) '("Zathura")))
 #+end_src
+
+* Roam Node Review
+:PROPERTIES:
+:ARCHIVE_TIME: 2024-07-31 Wed 22:01
+:ARCHIVE_FILE: ~/.config/doom/config.org
+:ARCHIVE_OLPATH: Modules/My_Lang/Org/Configuration
+:ARCHIVE_CATEGORY: config
+:END:
+#+begin_src emacs-lisp
+(defconst seconds-in-day 86400)
+
+(defvar review-length-days 90
+  "Number of days between full reviews of all nodes in org-roam database.")
+
+(defun my/org-reviewed-recently (node)
+  "A function that returns wether of not a node needs to be reviewed"
+  (unless (not (org-roam-node-p node))
+    (progn (let ((review_prop (-filter (lambda (prop) (string= (car prop) "REVIEWED"))
+                                       (org-roam-node-properties node))))
+             (unless (eq review_prop 'nil)
+               (let ((review_date (cdr (car review_prop)))
+                     (recent (format-time-string "%Y-%m-%d" (time-subtract 'nil (* seconds-in-day review-length-days)))))
+                 (org-time< recent review_date)))))))
+#+end_src
