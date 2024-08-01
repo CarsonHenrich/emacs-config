@@ -20,7 +20,7 @@ configuration the following files are generated:
 
 - =init.el=: Outlines what [[https:github.com/doomemacs/doomemacs/blob/develop/docs/getting_started.org#modules][doom modules]] will be enabled and other configuration
   that needs to occur early in the loading sequence, the majority of this can be
-  found in the [[Doom Modules]] section.
+  found in the [[Doom Block]] section.
 - =packages.el=: Outlines the packages to install and exactly how to install
   them when additional configuration is necessary.
 - =config.el=: If it doesn't fit into the above categories than this is where
@@ -203,7 +203,10 @@ This generates the ~doom!~ block of ~init.el~ which defines what should be
 loaded into doom emacs. Currently I only rely on modules provided by doom itself
 but any additions I may make will be described in their own section below the
 doom block.
-#+begin_src emacs-lisp :tangle init.el
+#+begin_src emacs-lisp :tangle init.el :lexical t
+(setq doom-module-load-path
+ '("/Users/carsonhenrich/.config/emacs/modules" "/Users/carsonhenrich/.config/doom/modules"))
+
 (doom! :input
        ;;chinese
        ;;japanese
@@ -281,7 +284,7 @@ doom block.
        ;; (debugger +lsp)
        (debugger)
        direnv
-       ;;docker
+       (docker +lsp)
        ;;editorconfig                               ; let someone else argue about tabs vs spaces
        ;;ein                                        ; tame Jupyter notebooks with emacs
        (eval +overlay)                              ; run code, run (also, repls)
@@ -300,8 +303,6 @@ doom block.
        (:if IS-MAC macos)                           ; improve compatibility with macOS
        (tty +osc)                                   ; improve the terminal Emacs experience
 
-       :my_lang
-       (org +pretty +query +present +hugo)
        :lang
        ;;agda                                       ; types of types of types of types...
        ;;beancount                                  ; mind the GAAP
@@ -317,17 +318,17 @@ doom block.
        ;;elixir                                     ; erlang done right
        ;;elm                                        ; care for a cup of TEA?
        emacs-lisp                                   ; drown in parentheses
-       ;; erlang                                     ; an elegant language for a more civilized age
+       ;;erlang                                     ; an elegant language for a more civilized age
        ;;ess                                        ; emacs speaks statistics
        ;;factor
        ;;faust                                      ; dsp, but you get to keep your soul
-       ;; fortran                                    ; in FORTRAN, GOD is REAL (unless declared INTEGER)
+       ;;fortran                                    ; in FORTRAN, GOD is REAL (unless declared INTEGER)
        ;;fsharp                                     ; ML stands for Microsoft's Language
        ;;fstar                                      ; (dependent) types and (monadic) effects and Z3
        ;;gdscript                                   ; the language you waited for
        (go +tree-sitter +lsp)                                  ; the hipster dialect
        ;;(graphql +lsp)                             ; Give queries a REST
-       ;; (haskell +lsp)                             ; a language that's lazier than I am
+       ;;(haskell +lsp)                             ; a language that's lazier than I am
        ;;hy                                         ; readability of scheme w/ speed of python
        ;;idris                                      ; a language you can depend on
        json                                         ; At least it ain't XML
@@ -358,7 +359,7 @@ doom block.
        ;;(ruby +rails)                              ; 1.step {|i| p "Ruby is #{i.even? ? 'love' : 'life'}"}
        (rust +tree-sitter +lsp)                                  ; Fe2O3.unwrap().unwrap().unwrap().unwrap()
        ;;scala                                      ; java, but good
-       ;; (scheme +guile)                           ; a fully conniving family of lisps
+       ;;(scheme +guile)                           ; a fully conniving family of lisps
        (sh +lsp +fish +powershell)                  ; she sells {ba,z,fi}sh shells on the C xor
        ;;sml
        ;;solidity                                   ; do you need a blockchain? No.
@@ -370,7 +371,7 @@ doom block.
 
        :email
        ;;(:if (executable-find "notmuch") (notmuch +org +afew))
-       (:if (executable-find "mu") (mu4e +org +gmail))
+       (:if (modulep! :my_tools mail)  (mu4e +org +gmail))
        ;;(wanderlust +gmail)
 
        :app
@@ -383,711 +384,1279 @@ doom block.
 
        :config
        ;;literate
-       (default +smartparens))
+       (default +smartparens)
+
+      
+       :my_lang
+       (org +roam +roam-ui +noter +pretty +query +present +hugo)
+       :my_tools
+       mail)
+
 #+end_src
 
-** My_Lang
-*** Org
-**** README
-Flags:
-- +pretty
-- +present
-- +hugo
-- +query
-**** Init
-*This section will run before all other sections*, we unpin ~org-roam~ to allow
- ~org-roam-ui~ to work.
-#+begin_src emacs-lisp :tangle modules/my_lang/org/init.el
-(when (modulep! :lang org +roam) (unpin! org-roam))
+** Template
+**** Initialization
+*This section will run before all other sections*
+Used for early initialization and overwriting doom base configuration
+***** How to use
+*Files:* ~init.el~
+[[https://github.com/doomemacs/doomemacs/blob/master/docs/getting_started.org#initel][Docs]]
+
+This file is loaded early, before anything else, but after Doom core is loaded.
+It is loaded in both interactive and non-interactive sessions (it’s the only
+file, besides ~cli.el~ that is loaded when the ~bin/doom~ starts up).
+
+*Do:*
+
+- Configure Emacs or perform setup/teardown operations that must be set early;
+  before other modules are (or this module is) loaded.
+- Reconfigure packages defined in Doom modules with ~use-package-hook!~ (as a
+  last resort, when ~after!~ and hooks aren’t enough).
+- Configure behavior of ~bin/doom~ in a way that must also apply in interactive
+  sessions.
+
+*Don’t:*
+
+- Configure packages with ~use-package!~ or ~after!~ from here
+- Preform expensive or error-prone operations; these files are evaluated
+  whenever ~bin/doom~ is used; a fatal error in this file can make Doom unbootable
+  (but not irreversibly).
+- Define new bin/doom commands here. That’s what ~cli.el~ is for.
+
+****** Template
+*NOTE ALL TEMPLATE CODE BLOCKS MUST BE CHANGED FROM SAYING ~:tangl~ TO ~:tangle~ IN HEADER*
+#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/init.el :lexical t
 #+end_src
 
 **** Packages
 Install packages required by this module according to other modules and flags set
-#+begin_src emacs-lisp :tangle modules/my_lang/org/packages.el
-(package! ob-mermaid)
-(package! engrave-faces)
-(when (modulep! :lang kotlin) (package! ob-kotlin))
-(when (modulep! :my_lang org +pretty) (package! org-modern))
-(when (modulep! :my_lang org +hugo) (package! ox-hugo))
-(when (modulep! :my_lang org +present) (package! org-present))
-(when (modulep! :my_lang org +query) (package! org-ql))
-(when (and (modulep! :my_lang org +query) (modulep! :lang org +roam))
-    (package! org-roam-ql)
-    (package! org-roam-ql-ql))
-(when (modulep! :lang org +roam2)
-  (package! org-roam-ui))
+***** How to use
+*Files:* ~packages.el~
+[[https://github.com/doomemacs/doomemacs/blob/master/docs/getting_started.org#packagesel][Docs]]
+
+This file is where package declarations belong. It’s also a good place to look
+if you want to see what packages a module manages (and where they are installed
+from).
+
+*Do:*
+- Declare packages with the ~package!~ macro
+- Disable single packages with package!’s ~:disable~ property or multiple packages
+  with the ~disable-packages!~ macro.
+- Use the ~featurep!~ macro to make packages conditional based on the state of
+  another module or the presence of a flag.
+
+*Don’t:*
+
+- Configure packages here (definitely no ~use-package!~ or ~after!~ in here!).
+  This file is read in an isolated environment and will have no lasting
+  effect. The only exception is configuration targeting ~straight.el~.
+ - Perform expensive calculations. These files are read often and sometimes
+   multiple times.
+ - Produce any side-effects, for the same reason.
+
+ The [[https://github.com/doomemacs/doomemacs/blob/master/docs/getting_started.org#package-management][Package Management]] section goes over the ~package!~ macro and how to deal with packages.
+
+****** Template
+*NOTE ALL TEMPLATE CODE BLOCKS MUST BE CHANGED FROM SAYING ~:tangl~ TO ~:tangle~ IN HEADER*
+#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/packages.el :lexical t
 #+end_src
 
 **** Configuration
+The bulk of the modules actual configuration
+***** How to use
+*Files:* config.el
+[[https://github.com/doomemacs/doomemacs/blob/master/docs/getting_started.org#confige][Docs]]
+
+The heart of every module. Code in this file should expect dependencies (in
+~packages.el~) to be installed and available. Use it to load and configure its
+packages.
+
+*Do:*
+- Use ~after!~ or ~use-package!~ to configure packages.
+  #+begin_src emacs-lisp :tangle no
+;; from modules/completion/company/config.el
+(use-package! company  ; `use-package!' is a thin wrapper around `use-package'
+                       ; it is required that you use this in Doom's modules,
+                       ; but not required to be used in your private config.
+  :commands (company-mode global-company-mode company-complete
+             company-complete-common company-manual-begin company-grab-line)
+  :config
+  (setq company-idle-delay nil
+        company-tooltip-limit 10
+        company-dabbrev-downcase nil
+        company-dabbrev-ignore-case nil)
+[...])
+#+end_src
+- Lazy load packages with use-package’s ~:defer~ property.
+- Use the ~featurep!~ macro to make some configuration conditional based on
+  the state of another module or the presence of a flag.
+
+*Don’t:*
+- Use ~package!~
+- Install packages with ~package.el~ or use-package’s ~:ensure~ property. Doom has
+  its own package manager. That’s what ~packages.el~ is for.
+
+****** Template
+*NOTE ALL TEMPLATE CODE BLOCKS MUST BE CHANGED FROM SAYING ~:tangl~ TO ~:tangle~ IN HEADER*
+#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/config.el :lexical t
+#+end_src
 ***** Definitions
 I like to separate out the definitions of variables and functions from the rest
 of the module so that it is out of the way and also because definitions tend to
 be more self-documenting.
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(after! org
-  (defconst seconds-in-day 86400)
+#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/config.el :lexical t
+#+end_src
 
-  (defvar review-length-days 90
-    "Number of days between full reviews of all nodes in org-roam database.")
-
-  (defvar org-agenda-directory (expand-file-name "agenda/" org-directory)
-    "The Primary Directory in which to place agenda files")
-
-  (defvar org-weekly-directory (expand-file-name "weekly/" org-agenda-directory)
-    "The Directory in which to place weekly agenda files")
-
-  (defun my/org-clock-jumplist ()
-    "Opens a buffer for you to decide which clock to go to"
-    (interactive)
-    (org-clock-goto 'select))
-
-  (after! org-roam
-    (defun nom/org-roam-capture-create-id ()
-      "Create id for captured note and add it to org-roam-capture-template."
-      (when (and (not org-note-abort) (org-roam-capture-p))
-        (org-roam-capture--put :id (org-id-get-create)))))
-
-  (defun my/org-time-stamp-inactive-with-time ()
-    (interactive)
-    (org-time-stamp-inactive 't))
-
-  (defun my/org-time-stamp-with-time ()
-    (interactive)
-    (org-time-stamp 't))
-
-  (defun my/org-update-reviewed ()
-    (interactive "*")
-    (org-set-property "REVIEWED" (format-time-string "%Y-%m-%d %H:%M:%S")))
-
-  (defun my/org-capture-add-created ()
-    (interactive)
-    (org-set-property "CREATED" (org-timestamp-translate (org-timestamp-from-time (current-time) 't 't))))
-
-  (defun my/org-capture-goto-project-notes-file ()
-    (interactive)
-    (find-file (+org-capture-project-notes-file)))
-
-  (defun my/org-agenda ()
-    "Open my default preset for org-agenda"
-    (interactive)
-    (org-agenda nil "n"))
-
-
-  (defun my/org-capture-week-file ()
-    "Return the filename of the current capture week file creating it if it doesn't exist"
-    (let ((filename
-           (expand-file-name (format-time-string "%Y-W%W.org") org-weekly-directory)))
-      (unless (f-exists? filename) (f-touch filename))
-      filename))
-
-  (defun my/org-reviewed-recently (node)
-    "A function that returns wether of not a node needs to be reviewed"
-    (unless (not (org-roam-node-p node))
-      (progn (let ((review_prop (-filter (lambda (prop) (string= (car prop) "REVIEWED"))
-                                         (org-roam-node-properties node))))
-               (unless (eq review_prop 'nil)
-                 (let ((review_date (cdr (car review_prop)))
-                       (recent (format-time-string "%Y-%m-%d" (time-subtract 'nil (* seconds-in-day review-length-days)))))
-                   (org-time< recent review_date)))))))
-
-  (defun my/org-capture-goto-week-file ()
-    (interactive)
-    (find-file (my/org-capture-week-file)))
-
-  (defun my/org-capture-work-file ()
-    "The file in which to place work related notes and tasks"
-    (expand-file-name "work.org" org-agenda-directory)))
+***** Keymaps
+By seperating keymaps from the rest of the configuration we keep the related
+things together and make it easy to modify related keymappings.
+#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/config.el :lexical t
 #+end_src
 
 ***** General
-When starting up Emacs launch the current week file
 
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :tangle t
-(after! org (setq initial-buffer-choice (my/org-capture-week-file)))
+#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/config.el :lexical t
 #+end_src
 
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :tangle t
-(after! org (setq
-             org-directory (file-truename "~/org/")
-             org-insert-heading-respect-content 'nil
-             org-catch-invisible-edits 'show-and-error
-             org-crypt-tag-matcher "CRYPT"
-             org-attach-auto-tag nil))
+**** Checks
+Modules sanity checks run on ~doom doctor~
+***** How to use
+*Files:* ~doctor.el~
+[[https://github.com/doomemacs/doomemacs/blob/master/docs/getting_started.org#doctorel][Docs]]
+
+When you execute doom doctor, this file defines a series of tests for the
+module. These should perform sanity checks on the environment, such as:
+
+- Check if the module’s dependencies are satisfied,
+- Warn if any of the enabled flags are incompatible,
+- Check if the system has any issues that may interfere with the operation of
+  this module.
+
+Use the warn!, error! and explain! macros to communicate issues to the user and,
+ideally, explain how to fix them.
+
+For example, the ~:lang cc~ module’s doctor checks to see if the ~irony~ server is
+installed:
+#+begin_src emacs-lisp :tangle no
+;; from lang/cc/doctor.el
+(require 'irony)
+(unless (file-directory-p irony-server-install-prefix)
+  (warn! "Irony server isn't installed. Run M-x irony-install-server"))
+#+end_src
+****** Template
+*NOTE ALL TEMPLATE CODE BLOCKS MUST BE CHANGED FROM SAYING ~:tangl~ TO ~:tangle~ IN HEADER*
+#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/doctor.el :lexical t
+#+end_src
+**** Autoload
+For functions that shouldn't be loaded until needed
+***** How to use
+*Files:* ~autoload/*.el~ OR ~autoload.el~
+[[https://github.com/doomemacs/doomemacs/blob/master/docs/getting_started.org#autoloadel-or-autoloadel][Docs]]
+
+These files are where you’ll store functions that shouldn’t be loaded until
+they’re needed and logic that should be autoloaded (evaluated very, very early
+at startup).
+
+This is all made possible thanks to these autoload cookie: ~;;;###autoload~.
+Placing this on top of a lisp form will do one of two things:
+
+1. Add a autoload call to Doom’s autoload file (found in
+   ~~/.emacs.d/.local/autoloads.el~, which is read very early in the startup
+   process).
+2. Or copy that lisp form to Doom’s autoload file verbatim (usually the case for
+   anything other than def* forms, like ~defun~ or ~defmacro~).
+
+Doom’s autoload file is generated by scanning these files when you execute ~doom
+sync~.
+
+For example:
+#+begin_src emacs-lisp :tangle no
+;; from modules/lang/org/autoload/org.el
+;;;###autoload
+(defun +org/toggle-checkbox ()
+  (interactive)
+  [...])
+
+;; from modules/lang/org/autoload/evil.el
+;;;###autoload (autoload '+org:attach "lang/org/autoload/evil" nil t)
+(evil-define-command +org:attach (&optional uri)
+  (interactive "<a>")
+  [...])
+#+end_src
+
+****** Template
+*NOTE ALL TEMPLATE CODE BLOCKS MUST BE CHANGED FROM SAYING ~:tangl~ TO ~:tangle~ IN HEADER*
+#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/autoload/{AUTOLOAD}.el :lexical t
+#+end_src
+**** CLI
+Configure ~doom~ CLI commands
+***** How to Use
+*Files:* ~cli.el~
+[[https://github.com/doomemacs/doomemacs/blob/master/docs/getting_started.org#cliel][Docs]]
+This file is read when bin/doom starts up. Use it to define your own CLI
+commands or reconfigure existing ones.
+
+****** Template
+*NOTE ALL TEMPLATE CODE BLOCKS MUST BE CHANGED FROM SAYING ~:tangl~ TO ~:tangle~ IN HEADER*
+#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/cli.el :lexical t
+#+end_src
+
+**** Tests
+Doom Unit Tests
+***** How to use
+*Files:* ~test/**/test-*.el~
+[[https://github.com/doomemacs/doomemacs/blob/master/docs/getting_started.org#testtest-el][Docs]]
+
+Doom’s unit tests go here. More information on them to come…
+****** Template
+*NOTE ALL TEMPLATE CODE BLOCKS MUST BE CHANGED FROM SAYING ~:tangl~ TO ~:tangle~ IN HEADER*
+#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/test/{**}/test-{*}.el :lexical t
+#+end_src
+
+**** Flags
+#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/config.el :lexical t
+  (dolist (flag (doom-module-context-get :flags))
+    (load! (concat "flags/" (substring (symbol-name flag) 1)) nil t))
+#+end_src
+
+***** +{FLAG}
+#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/flags/{FLAG}.el :lexical t
+#+end_src
+
+
+**** Additional Files
+Use for whatever purpose you wish
+***** How to use
+*Files:* All Additional Files
+[[https://github.com/doomemacs/doomemacs/blob/master/docs/getting_started.org#additional-files][Docs]]
+
+Any files beyond the ones I have already named are not given special treatment.
+They must be loaded manually to be loaded at all. In this way modules can be
+organized in any way you wish. Still, there is one convention that has emerged
+in Doom’s community that you may choose to adopt: extra files in the root of the
+module are prefixed with a plus, e.g. +extra.el. There is no syntactical or
+functional significance to this convention.
+
+These can be loaded with the load! macro, which will load an elisp file relative
+to the file it’s used from. e.g.
+****** Template
+*NOTE ALL TEMPLATE CODE BLOCKS MUST BE CHANGED FROM SAYING ~:tangl~ TO ~:tangle~ IN HEADER*
+#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/{**}/{*}.el :lexical t
+#+end_src
+** My_Lang
+*** Org
+**** Initialization
+*This section will run before all other sections*
+Used for early initialization and overwriting doom base configuration
+***** TODO Unpin Org-roam
+- Note taken on [2024-08-01 Thu 02:04] \\
+  Unsure wether this needs to be done here or not so for now I will disable
+  tangling on this block and we shall see
+We unpin ~org-roam~ to allow ~org-roam-ui~ to work.
+#+begin_src emacs-lisp
+(when (modulep! :lang org +roam) (unpin! org-roam))
+#+end_src
+**** Packages
+Install packages required by this module according to other modules and flags set
+#+begin_src emacs-lisp :tangle modules/my_lang/org/packages.el :noweb yes :lexical t
+(package! ob-mermaid)
+(package! engrave-faces)
+(package! org-super-agenda)
+(when (modulep! :lang kotlin) (package! ob-kotlin))
+(when (modulep! +pretty)
+  <<modules-my_lang-org-pretty-packages>>)
+(when (modulep! +hugo)
+  <<modules-my_lang-org-hugo-packages>>)
+(when (modulep! +present)
+  <<modules-my_lang-org-present-packages>>)
+(when (modulep! +query)
+  <<modules-my_lang-org-query-packages>>)
+(when (modulep! +roam)
+  <<modules-my_lang-org-roam-packages>>)
+(when (modulep! +roam-ui)
+  <<modules-my_lang-org-roam-ui-packages>>)
+#+end_src
+
+**** Configuration
+#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :noweb yes :lexical t
+<<use_org>>
+<<use_org-super-agenda>>
+#+end_src
+
+***** Org
+#+name:use_org
+#+begin_src emacs-lisp :noweb yes
+(use-package! org
+  :init
+  (list
+    <<org-keymaps>>
+    )
+  :config
+  <<org-config>>)
+#+end_src
+****** Config
+:PROPERTIES:
+:header-args:      :noweb-ref org-config
+:END:
+Some general org mode configuration
+#+begin_src emacs-lisp
+(setq
+ org-directory (file-truename "~/org/")
+ org-insert-heading-respect-content 'nil
+ org-catch-invisible-edits 'show-and-error
+ org-crypt-tag-matcher "CRYPT"
+ org-attach-auto-tag nil)
+
+(defvar org-agenda-directory (expand-file-name "agenda/" org-directory)
+  "The Primary Directory in which to place agenda files")
+
+(defvar org-weekly-directory (expand-file-name "weekly/" org-agenda-directory)
+  "The Directory in which to place weekly agenda files")
 #+end_src
 
 Set some configuration for archiving org headings
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :tangle t
-(after! org (setq
-             org-archive-mark-done 'nil
-             org-archive-subtree-add-inherited-tags 't
-             org-archive-location "./archive/%s.archive::"))
+#+begin_src emacs-lisp
+(setq
+ org-archive-mark-done 'nil
+ org-archive-subtree-add-inherited-tags 't
+ org-archive-location "./archive/%s.archive::")
 #+end_src
 
-When using ~org-pomodoro~ I prefer to take my breaks manually rather than simply
-having the timer start, to give me a chance to finish things up.
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(after! org (when (modulep! :lang org +pomodoro) (setq org-pomodoro-manual-break 't)))
+Have emails that I create tasks out of go into ~email.org~
+#+begin_src emacs-lisp
+(when (modulep! :my_tools mail)
+  (setq +org-capture-emails-file (expand-file-name  "email.org" org-agenda-directory)))
 #+end_src
 
-Have emails that I create tasks out of go into email.org
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(after! org (when (modulep! :my_tools mail)
-             (setq +org-capture-emails-file (expand-file-name  "email.org" org-agenda-directory))))
+******* Clock and Logging
+Convenience function for selecting a clock to jump to
+#+begin_src emacs-lisp
+(defun my/org-clock-jumplist ()
+  "Opens a buffer for you to decide which clock to go to"
+  (interactive)
+  (org-clock-goto 'select))
 #+end_src
 
 Save org buffers on auto save and on clocking in/out, this is mostly for syncing
 purposes as without it I frequently forget to save buffers while taking notes.
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(after! org
- (add-hook! #'auto-save-hook #'org-save-all-org-buffers)
- (add-hook! #'org-clock-in-hook #'org-save-all-org-buffers)
- (add-hook! #'org-clock-out-hook #'org-save-all-org-buffers))
+#+begin_src emacs-lisp
+(add-hook! #'auto-save-hook #'org-save-all-org-buffers)
+(add-hook! #'org-clock-in-hook #'org-save-all-org-buffers)
+(add-hook! #'org-clock-out-hook #'org-save-all-org-buffers)
  #+end_src
 
 Setting up logging for org-mode tasks so that the time and change is logged for
 refiles, reschedules, and done states.
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(after! org-mode (setq
-                  org-log-refile 'time
-                  org-log-done 'time
-                  org-log-reschedule 'time
-                  org-log-redeadline 'time
-                  org-log-done-with-time 't
-                  org-log-note-clock-out 'nil
-                  org-log-into-drawer 't))
+#+begin_src emacs-lisp
+(setq
+ org-log-refile 'time
+ org-log-done 'time
+ org-log-reschedule 'time
+ org-log-redeadline 'time
+ org-log-done-with-time 't
+ org-log-note-clock-out 'nil
+ org-log-into-drawer 't)
 #+end_src
 
 Also log state changes for other keywords, speaking of which we are also
 defining the keywords and the faces that should be used for them.
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
+#+begin_src emacs-lisp
 (require 'org-faces)
-(after! org-mode (setq
-                  org-todo-keywords
-                  '((sequence "TODO(t)" "NEXT(n!/!)" "HOLD(h!/!)" "|" "DONE(d!)" "KILL(k!)"))
-                  org-todo-keyword-faces
-                  '(("[-]" . +org-todo-active) ("NEXT" . +org-todo-active)
-                    ("[?]" . +org-todo-onhold) ("HOLD" . +org-todo-onhold)
-                    ("KILL" . +org-todo-cancel))))
+(setq
+ org-todo-keywords
+ '((sequence "TODO(t)" "NEXT(n!/!)" "HOLD(h!/!)" "|" "DONE(d!)" "KILL(k!)"))
+ org-todo-keyword-faces
+ '(("[-]" . +org-todo-active) ("NEXT" . +org-todo-active)
+   ("[?]" . +org-todo-onhold) ("HOLD" . +org-todo-onhold)
+   ("KILL" . +org-todo-cancel)))
 #+end_src
 
-Templates for org-mode captures for quick note taking
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(after! org-mode (setq org-capture-templates
-                       '(("x" "Quick"
-                          entry (file my/org-capture-week-file)
-                          "* %i%? \n"
-                          :prepend 't
-                          :prepare-finalize my/org-capture-add-created)
-                         ("w" "Work"
-                          entry (file my/org-capture-work-file)
-                          "* %i%? :Work:\n"
-                          :prepend 't
-                          :prepare-finalize my/org-capture-add-created)
-                         ("r" "Review"
-                          entry (file my/org-capture-week-file)
-                          "* TODO Review %a%? :INBOX:Review:\n"
-                          :prepend 't
-                          :prepare-finalize my/org-capture-add-created
-                          :immediate-finish 't)
-                         ("c" "Clock-In New Task"
-                          entry (file my/org-capture-week-file)
-                          "* TODO %i%? \n"
-                          :prepend 't
-                          :prepare-finalize my/org-capture-add-created
-                          :clock-keep t
-                          :clock-in t)
-                         ("p" "Project-local")
-                         ("pt" "Project-local Todo"
-                          entry (file +org-capture-project-notes-file)
-                          "* TODO %? :INBOX:\n%i\n%a"
-                          :unnarrowed t)
-                         ("pn" "Project-local Notes"
-                          entry (file +org-capture-project-notes-file)
-                          "* %? :Notes:INBOX:\n%i\n%a"
-                          :unnarrowed t)
-                         ("pc" "Project-local Changelog"
-                          entry (file+olp +org-capture-project-notes-file)
-                          "* %? :Changelog:Unreleased:INBOX:\n%i\n%a"
-                          :unnarrowed t))))
+When using ~org-pomodoro~ I prefer to take my breaks manually rather than simply
+having the timer start, to give me a chance to finish things up.
+#+begin_src emacs-lisp
+(when (modulep! :lang org +pomodoro) (setq org-pomodoro-manual-break 't))
 #+end_src
 
-***** Agenda
-Set all files contained in ~org-agenda-directory~ as part of the org-agenda
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(after! org (setq org-agenda-files (directory-files-recursively org-agenda-directory "\\.org$")))
-#+end_src
-
-Save all org buffers when entering or leaving the agenda
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(after! org (add-hook! 'evil-org-agenda-mode-hook #'org-save-all-org-buffers))
-#+end_src
-
+******* Agenda and Capture
 Set some general configuration for the org agenda
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(after! org
-  (setq
-   org-agenda-tags-column 0
-   org-agenda-span 1
-   org-deadline-warning-days 5
-   org-agenda-block-separator ?─
-   org-agenda-time-grid
-   '((daily today require-timed)
-     (800 1000 1200 1400 1600 1800 2000)
-     " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
-   org-agenda-current-time-string "◀── now ─────────────────────────────────────────────────"
-   org-agenda-inhibit-startup 'nil
-   org-agenda-start-day 'nil))
-#+end_src
-
-Make sure the ~org-super-agenda-groups~ get used and ensure the keymaps aren't
-different for the group header lines.
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(after! org-super-agenda
-  (org-super-agenda-mode)
-  (setq org-super-agenda-header-map (make-sparse-keymap)))
+#+begin_src emacs-lisp
+(setq
+ org-agenda-tags-column 0
+ org-agenda-span 1
+ org-deadline-warning-days 5
+ org-agenda-block-separator ?─
+ org-agenda-time-grid
+ '((daily today require-timed)
+   (800 1000 1200 1400 1600 1800 2000)
+   " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
+ org-agenda-current-time-string "◀── now ─────────────────────────────────────────────────"
+ org-agenda-inhibit-startup 'nil
+ org-agenda-start-day 'nil)
 #+end_src
 
 Add in ~org-habit~ and only show todays habits in the agenda
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(after! org
-  (add-to-list 'org-modules 'org-habit)
-  (setq org-habit-show-habits-only-for-today t))
+#+begin_src emacs-lisp
+(add-to-list 'org-modules 'org-habit)
+(setq org-habit-show-habits-only-for-today t)
 #+end_src
 
-****** Custom Agenda Commands
+Set all files contained in ~org-agenda-directory~ as part of the org-agenda
+#+begin_src emacs-lisp
+(setq org-agenda-files (directory-files-recursively org-agenda-directory "\\.org$"))
+#+end_src
 
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
- (after! org
-  (setq org-agenda-custom-commands
-   '(("n" "Today and TODOs"
-      ((agenda "" ((org-agenda-overriding-header "")
-                   (org-agenda-include-diary t)
-                   (org-deadline-warning-days 7)
-                   (org-agenda-span 'day)
-                   (org-super-agenda-groups
-                          '((:name "Today"
-                                :time-grid t)
-                            (:name "Important"
-                                :priority "A")
-                            (:name "Personal"
-                                :and (
-                                      :not (:children todo)
-                                      :tag "Personal"))
-                            (:name "Projects"
-                                :tag "PROJECT"
-                                :order 3)
-                            (:auto-outline-path t
-                             :order 4)
-                            ))))
+Various functions for working with captures and timestamps
+#+begin_src emacs-lisp
+(defun my/org-time-stamp-inactive-with-time ()
+  "Create an inactive timestamp with a time specifier"
+  (interactive)
+  (org-time-stamp-inactive 't))
 
-       (alltodo "" ((org-super-agenda-groups
+(defun my/org-time-stamp-with-time ()
+  "Create an active timestamp with a time specifier"
+  (interactive)
+  (org-time-stamp 't))
+
+(defun my/org-update-reviewed ()
+  "Create or update the `REVIEWED' property of the heading at point"
+  (interactive)
+  (org-set-property "REVIEWED" (format-time-string "%Y-%m-%d %H:%M:%S")))
+
+(defun my/org-capture-add-created ()
+  "Create or update the `CREATED' property of the heading at point"
+  (interactive)
+  (org-set-property "CREATED" (org-timestamp-translate (org-timestamp-from-time (current-time) 't 't))))
+
+(defun my/org-capture-goto-project-notes-file ()
+  "Goto the notes file for the current project"
+  (interactive)
+  (find-file (+org-capture-project-notes-file)))
+
+(defun my/org-capture-week-file ()
+  "Return the filename of the current capture week file creating it if it doesn't exist"
+  (let ((filename
+         (expand-file-name (format-time-string "%Y-W%W.org") org-weekly-directory)))
+    (unless (f-exists? filename) (f-touch filename))
+    filename))
+
+(defun my/org-capture-goto-week-file ()
+  "Goto the week file for the current week"
+  (interactive)
+  (find-file (my/org-capture-week-file)))
+
+(defun my/org-capture-work-file ()
+  "The file in which to place work related notes and tasks"
+  (expand-file-name "work.org" org-agenda-directory))
+#+end_src
+
+Templates for ~org-mode~ captures for quick note taking
+#+begin_src emacs-lisp
+(setq org-capture-templates
+      '(("x" "Quick"
+         entry (file my/org-capture-week-file)
+         "* %i%? \n"
+         :prepend 't
+         :prepare-finalize my/org-capture-add-created)
+        ("w" "Work"
+         entry (file my/org-capture-work-file)
+         "* %i%? :Work:\n"
+         :prepend 't
+         :prepare-finalize my/org-capture-add-created)
+        ("r" "Review"
+         entry (file my/org-capture-week-file)
+         "* TODO Review %a%? :INBOX:Review:\n"
+         :prepend 't
+         :prepare-finalize my/org-capture-add-created
+         :immediate-finish 't)
+        ("c" "Clock-In New Task"
+         entry (file my/org-capture-week-file)
+         "* TODO %i%? \n"
+         :prepend 't
+         :prepare-finalize my/org-capture-add-created
+         :clock-keep t
+         :clock-in t)
+        ("p" "Project-local")
+        ("pt" "Project-local Todo"
+         entry (file +org-capture-project-notes-file)
+         "* TODO %? :INBOX:\n%i\n%a"
+         :unnarrowed t)
+        ("pn" "Project-local Notes"
+         entry (file +org-capture-project-notes-file)
+         "* %? :Notes:INBOX:\n%i\n%a"
+         :unnarrowed t)
+        ("pc" "Project-local Changelog"
+         entry (file+olp +org-capture-project-notes-file)
+         "* %? :Changelog:Unreleased:INBOX:\n%i\n%a"
+         :unnarrowed t)))
+#+end_src
+
+Save all org buffers when entering or leaving the agenda
+#+begin_src emacs-lisp
+(add-hook! 'evil-org-agenda-mode-hook #'org-save-all-org-buffers)
+#+end_src
+
+******* Babel
+Setup the default header args for code blocks I prefer that ~RESULT~ blocks don't
+end up cluttering my notes so I set that to silent and then by default allow for
+using ~noweb~ syntax.
+#+begin_src emacs-lisp
+(setq org-babel-default-header-args
+ '((:session . "none") (:results . "silent") (:exports . "code") (:cache . "no")
+   (:noweb . "yes") (:hlines . "no") (:tangle . "no")))
+#+end_src
+
+****** Keymaps
+:PROPERTIES:
+:header-args:      :noweb-ref org-keymaps
+:END:
+Make switching between visible heading a bit easier
+#+begin_src emacs-lisp
+(map!
+ :map org-mode-map
+ :desc "Move to Next Visible Heading"      :n "] h" #'org-next-visible-heading
+ :desc "Move to Previous Visible Heading"  :n "[ h" #'org-previous-visible-heading)
+#+end_src
+
+#+begin_src emacs-lisp
+(map!
+ :map org-mode-map
+ :localleader
+ :desc "Update Reviewed"                :n "R" #'my/org-update-reviewed
+ :desc "Add Created"                    :n "C" #'my/org-capture-add-created
+ :desc "Decrypt"                        :n "D" #'org-decrypt-entry
+ :desc "Encrypt"                        :n "E" #'org-encrypt-entry
+ :desc "Remove Result"                  :n "u" #'org-babel-remove-result
+ :desc "Remove Result Blocks"           :n "U" #'+org/remove-result-blocks
+ :desc "Add Note"                       :n "n" #'org-add-note
+ :desc "Org export to clipboard"        :n "y" #'+org/export-to-clipboard
+ :desc "Org export to clipboard as RTF" :n "Y" #'+org/export-to-clipboard-as-rich-text)
+#+end_src
+
+#+begin_src emacs-lisp
+(map!
+ :map org-mode-map
+ :localleader
+ :prefix ("c" . "clock")
+ :n "d" 'nil      ;; What these are mapped to by doom make no sense for my use-case
+ :n "G" 'nil
+ :desc "Clock Range Prev Day"          :n "-" #'org-clock-timestamps-up
+ :desc "Clock Range Next Day"          :n "=" #'org-clock-timestamps-down
+ :desc "Eval Time Range"               :n "t" #'org-evaluate-time-range
+ :desc "Clock In"                      :n "i" #'org-clock-in
+ :desc "Clock In"                      :n "i" #'org-clock-in
+ :desc "Clock Out"                     :n "o" #'org-clock-out
+ :desc "Clock In Last"                 :n "I" #'org-clock-in-last
+ :desc "Modify Effort"                 :n "e" #'org-clock-modify-effort-estimate
+ :desc "Set Effort"                    :n "E" #'org-set-effort
+ :desc "Toggle last clock"             :n "l" #'+org/toggle-last-clock
+ :desc "Resolve Timeclocks"            :n "r" #'org-resolve-clocks
+ :desc "Time Report"                   :n "R" #'org-clock-report
+ :desc "Goto Clock"                    :n "g" #'org-clock-goto
+ :desc "Clock Jumplist"                :n "c" #'my/org-clock-jumplist
+ :desc "Cancel Clock"                  :n "C" #'org-clock-cancel)
+#+end_src
+
+#+begin_src emacs-lisp
+(map!
+ :map org-mode-map
+ :localleader
+ :prefix  ("d" . "date")
+ :desc "Deadline"                       :n "d" #'org-deadline
+ :desc "Schedule"                       :n "s" #'org-schedule
+ :desc "Active Timestamp"               :n "t" #'org-time-stamp
+ :desc "Active Timestamp with Time"     :n "T" #'my/org-time-stamp-with-time
+ :desc "Inactive Timestamp"             :n "i" #'org-time-stamp-inactive
+ :desc "Inactive Timestamp with Time"   :n "I" #'my/org-time-stamp-inactive-with-time)
+#+end_src
+
+#+begin_src emacs-lisp
+(map!
+ :map org-mode-map
+ :localleader
+ :prefix  ("s" . "subtree")
+ :desc "Archive Subtree to Sibling"   :n "z" #'org-archive-to-archive-sibling)
+#+end_src
+
+#+begin_src emacs-lisp
+(map!
+ :map org-mode-map
+ :localleader
+ :prefix ("p" . "priority")
+ :desc "Priority Up"          :n "k" #'org-priority-up
+ :desc "Priority Down"        :n "j" #'org-priority-down
+ :desc "Set Priority"         :n "p" #'org-priority)
+#+end_src
+
+******* Global Org Mappings
+#+begin_src emacs-lisp
+(map!
+ :leader
+ :desc "Capture"             "x"   #'org-capture)
+#+end_src
+#+begin_src emacs-lisp
+(map!
+ :leader
+ :prefix ("n" . "notes")
+ :desc "Find file in notes"           "f" #'+default/find-in-notes
+ :desc "Browse notes"                 "F" #'+default/browse-notes
+ :desc "Tags search"                  "m" #'org-tags-view
+ :desc "Org capture"                  "n" #'org-capture
+ :desc "Goto capture"                 "N" #'org-capture-goto-target
+ :desc "Active org-clock"             "o" #'org-clock-goto
+ :desc "Todo list"                    "T" #'org-todo-list
+ :desc "Search notes"                 "s" #'+default/org-notes-search
+ :desc "Search org agenda headlines"  "S" #'+default/org-notes-headlines
+ :desc "View search"                  "v" #'org-search-view
+ :desc "Search notes for symbol"      "*" #'+default/search-notes-for-symbol-at-point
+ :desc "Org agenda"                   "a" #'org-agenda
+ :desc "Toggle last org-clock"        "C" #'+org/toggle-last-clock
+ (:when (modulep! :tools biblio)
+   :desc "Bibliographic notes"        "b"
+   (cond ((modulep! :completion vertico)  #'citar-open-notes)
+         ((modulep! :completion ivy)      #'ivy-bibtex)
+         ((modulep! :completion helm)     #'helm-bibtex))))
+#+end_src
+#+begin_src emacs-lisp
+(map!
+ :leader
+ :prefix ("n" . "notes")
+ (:prefix ("g". "goto")
+  :desc "Last Refile"                :n "r" #'org-refile-goto-last-stored
+  :desc "Last Capture"               :n "x" #'org-capture-goto-last-stored
+  :desc "Clock"                      :n "c" #'org-clock-goto
+  :desc "Weekly Agenda Note"         :n "g" #'my/org-capture-goto-week-file
+  :desc "Project Notes"              :n "p" #'my/org-capture-goto-project-notes-file))
+#+end_src
+#+begin_src emacs-lisp
+(map!
+ :leader
+ :prefix ("n" . "notes")
+ (:prefix ("c" . "clock")
+  :desc "Clock In"                      :n "i" #'org-clock-in
+  :desc "Clock Out"                     :n "o" #'org-clock-out
+  :desc "Clock In Last"                 :n "I" #'org-clock-in-last
+  :desc "Modify Effort"                 :n "e" #'org-clock-modify-effort-estimate
+  :desc "Toggle last clock"             :n "l" #'+org/toggle-last-clock
+  :desc "Resolve Timeclocks"            :n "r" #'org-resolve-clocks
+  :desc "Time Report"                   :n "R" #'org-clock-report
+  :desc "Goto Clock"                    :n "g" #'org-clock-goto
+  :desc "Clock Jumplist"                :n "c" #'my/org-clock-jumplist
+  :desc "Cancel Clock"                  :n "C" #'org-clock-cancel))
+#+end_src
+
+******* Org Agenda Mappings
+#+begin_src emacs-lisp
+(map! :leader
+      :desc "My Agenda" :n "\\" #'my/org-agenda)
+(map! :map org-agenda-mode-map
+      :localleader
+      :desc "Add Id" :n "I" #'my/org-agenda-id-get-create)
+#+end_src
+
+***** Org Super Agenda
+#+name: use_org-super-agenda
+#+begin_src emacs-lisp :noweb yes
+(use-package! org-super-agenda
+  :after
+  org
+  :init
+  (list
+    <<org-super-agenda-keymaps>>
+    )
+  :config
+  <<org-super-agenda-config>>)
+#+end_src
+****** Config
+:PROPERTIES:
+:header-args: :noweb-ref org-super-agenda-config
+:END:
+Make sure the ~org-super-agenda-groups~ get used and ensure the keymaps aren't
+different for the group header lines.
+#+begin_src emacs-lisp
+(org-super-agenda-mode)
+(setq org-super-agenda-header-map (make-sparse-keymap))
+#+end_src
+
+My default ~org-agenda~ command
+#+begin_src emacs-lisp
+(defun my/org-agenda ()
+  "Open my default preset for org-agenda"
+  (interactive)
+  (org-agenda nil "n"))
+#+end_src
+
+Custom commands for displaying the agenda
+#+begin_src emacs-lisp
+(setq org-agenda-custom-commands
+      '(("n" "Today and TODOs"
+         ((agenda "" ((org-agenda-overriding-header "")
+                      (org-agenda-include-diary t)
+                      (org-deadline-warning-days 7)
+                      (org-agenda-span 'day)
+                      (org-super-agenda-groups
+                       '((:name "Today"
+                          :time-grid t)
+                         (:name "Important"
+                          :priority "A")
+                         (:name "Personal"
+                          :and (
+                                :not (:children todo)
+                                :tag "Personal"))
+                         (:name "Projects"
+                          :tag "PROJECT"
+                          :order 3)
+                         (:auto-outline-path t
+                          :order 4)))))
+
+
+          (alltodo "" ((org-super-agenda-groups
                         '((:name "Inbox"
-                                :tag "INBOX")
+                           :tag "INBOX")
                           (:discard (:habit t :todo "DONE" :todo "KILL" :scheduled today :deadline today))
                           (:name "Important"
-                                :priority "A")
+                           :priority "A")
                           (:auto-outline-path t :order 5)
                           (:name "HOLD" :and (:not (:tag "PROJECT") :todo "HOLD") :order 100)
                           (:name "Projects"
-                                :and (:not (:children todo)
-                                      :tag "PROJECT")
-                                :order 4)
+                           :and (:not (:children todo)
+                                 :tag "PROJECT")
+                           :order 4)
                           (:name "Personal"
-                                :and (:not (:children todo)
-                                      :tag "Personal")
-                                :order 1)
-                          (:discard (:children todo))
-                          )))))
-       ((org-agenda-prefix-format '((agenda . "%i %?-12t%-12s") (todo . "  %-5e %i") (tags . "%i") (search . "%i"))))))))
+                           :and (:not (:children todo)
+                                 :tag "Personal")
+                           :order 1)
+                          (:discard (:children todo)))))))
+
+         ((org-agenda-prefix-format '((agenda . "%i %?-12t%-12s") (todo . "  %-5e %i") (tags . "%i") (search . "%i")))))))
 #+end_src
 
-***** Appearance
-Org styling, hide markup etc.
-
+**** Flags
 #+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(after! org (setq
-             org-auto-align-tags t
-             org-tags-column 0
-             org-ellipsis "…"
-             org-cycle-inline-images-display 't
-             org-startup-with-latex-preview 't
-             org-startup-folded 't
-             org-hide-emphasis-markers t
-             org-pretty-entities t))
+(dolist (flag (doom-module-context-get :flags))
+  (load! (concat "flags/" (substring (symbol-name flag) 1)) nil t))
+#+end_src
+***** +pretty
+#+begin_src emacs-lisp :tangle modules/my_lang/org/flags/pretty.el :lexical t :noweb yes
+;;;###if (modulep! +pretty)
+<<use_org-modern>>
 #+end_src
 
-Hide emphasis markers on formatted text
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(after! org (setq org-hide-emphasis-markers t
-                  cursor-hidden 'nil))
+****** Packages
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-pretty-packages
+:END:
+#+begin_src emacs-lisp
+(package! org-modern)
+#+end_src
+****** Org-Modern
+#+name: use_org-modern
+#+begin_src emacs-lisp :noweb yes
+(use-package! org-modern
+  :init
+  (list
+    <<modules-my_lang-org-modern-keymaps>>
+    )
+  :config
+  <<modules-my_lang-org-modern-config>>)
 #+end_src
 
-Setup configuration for exporting highlighted code blocks
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(after! org (setq org-latex-src-block-backend 'engraved
-                  org-latex-engraved-theme    't))
+******* Config
+:PROPERTIES:
+:header-args:      :noweb-ref modules-my_lang-org-modern-config
+:END:
+#+begin_src emacs-lisp
+(setq global-org-modern-mode t)
+#+end_src
+******* Keymaps
+:PROPERTIES:
+:header-args:      :noweb-ref modules-my_lang-org-modern-keymaps
+:END:
+***** +noter
+#+begin_src emacs-lisp :tangle modules/my_lang/org/flags/noter.el :lexical t :noweb yes
+;;;###if (modulep! +noter)
+<<use_org-noter>>
+#+end_src
+****** Checks
+#+begin_src emacs-lisp :tangle modules/my_lang/org/doctor.el
+(when (and (modulep! +noter) (not (modulep! :lang org +noter))
+  (warn! "The :my_lang org +noter flag is intended to be used with :lang org +noter, not doing so is undefined behavior")
+#+end_src
+****** Packages
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-noter-packages
+:END:
+#+begin_src emacs-lisp
+(package! org-noter)
 #+end_src
 
-Enable word count in modes listed in ~doom-modeline-continuous-word-count-modes~
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(setq doom-modeline-enable-word-count 't)
+****** Org-Noter
+#+name: use_org-noter
+#+begin_src emacs-lisp :noweb yes
+(use-package! org-noter
+  :defer t
+  :init
+  (list
+    <<modules-my_lang-org-noter-keymaps>>
+    )
+  :config
+  <<modules-my_lang-org-noter-config>>)
 #+end_src
-
-Allow for mixed pitch fonts in buffers
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(add-hook! 'org-mode-hook #'mixed-pitch-mode)
-(add-hook! 'org-mode-hook #'solaire-mode)
-(setq mixed-pitch-variable-pitch-cursor nil)
+******* Config
+:PROPERTIES:
+:header-args:      :noweb-ref modules-my_lang-org-noter-config
+:END:
+#+begin_src emacs-lisp :results silent
+(setq org-noter-notes-search-path
+      (mapcar (lambda (x) (expand-file-name x org-directory)) '("agenda" "notes" "pages")))
+(unless org-noter-notes-search-path
+  (setq org-noter-notes-search-path (list org-directory)))
+(org-noter-enable-org-roam-integration)
+(org-noter-enable-update-renames)
 #+end_src
-
-Make sure certain org faces use the fixed-pitch face when ~variable-pitch-mode~ is on
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(require 'org-faces)
-(set-face-attribute 'org-ellipsis nil :inherit 'default :box nil)
-(set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
-(set-face-attribute 'org-table nil :inherit 'fixed-pitch)
-(set-face-attribute 'org-formula nil :inherit 'fixed-pitch)
-(set-face-attribute 'org-code nil :inherit '(shadow fixed-pitch))
-(set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
-(set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
-(set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
-(set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch)
-#+end_src
-
-When enabled make sure ~org-modern-mode~ is used in org buffers.
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(when (modulep! :my_lang org +pretty) (add-hook! 'org-mode-hook #'org-modern-mode))
-(when (modulep! :my_lang org +pretty) (add-hook! 'org-agenda-finalize-hook #'org-modern-agenda))
-#+end_src
-
-***** Keymaps
-****** Org Mode Mappings
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
+******* Keymaps
+:PROPERTIES:
+:header-args:      :noweb-ref modules-my_lang-org-noter-keymaps
+:END:
+#+begin_src emacs-lisp :tangle no
 (map!
-      (:map org-mode-map
-       :desc "Move to Next Visible Heading"      :n "] h" #'org-next-visible-heading
-       :desc "Move to Previous Visible Heading"  :n "[ h" #'org-previous-visible-heading)
-       (:localleader
-        :desc "Update Reviewed"         "R" #'my/org-update-reviewed
-        :desc "Add Created"             "C" #'my/org-capture-add-created
-        :desc "Decrypt"                        :n "D" #'org-decrypt-entry
-        :desc "Encrypt"                        :n "E" #'org-encrypt-entry
-        :desc "Remove Result"        :n "u" #'org-babel-remove-result
-        :desc "Remove Result Blocks" :n "U" #'+org/remove-result-blocks
-        :desc "Add Note"             :n "n" #'org-add-note
-        :desc "Org export to clipboard"        "y" #'+org/export-to-clipboard
-        :desc "Org export to clipboard as RTF" "Y" #'+org/export-to-clipboard-as-rich-text
-        (:prefix  ("d" . "date")
-         :desc "Deadline"                       :n "d" #'org-deadline
-         :desc "Schedule"                       :n "s" #'org-schedule
-         :desc "Active Timestamp"               :n "t" #'org-time-stamp
-         :desc "Active Timestamp with Time"     :n "T" #'my/org-time-stamp-with-time
-         :desc "Inactive Timestamp"             :n "i" #'org-time-stamp-inactive
-         :desc "Inactive Timestamp with Time"   :n "I" #'my/org-time-stamp-inactive-with-time)
-        (:prefix  ("s" . "subtree")
-         :desc "Archive Subtree to Sibling"   :n "z" #'org-archive-to-archive-sibling)
-        (:prefix ("c" . "clock")
-         :n "d" 'nil
-         :n "G" 'nil
-         :desc "Clock Range Prev Day"          :n "-" #'org-clock-timestamps-up
-         :desc "Clock Range Next Day"          :n "=" #'org-clock-timestamps-down
-         :desc "Eval Time Range"               :n "t" #'org-evaluate-time-range
-         :desc "Clock In"                      :n "i" #'org-clock-in
-         :desc "Clock In"                      :n "i" #'org-clock-in
-         :desc "Clock Out"                     :n "o" #'org-clock-out
-         :desc "Clock In Last"                 :n "I" #'org-clock-in-last
-         :desc "Modify Effort"                 :n "e" #'org-clock-modify-effort-estimate
-         :desc "Set Effort"                    :n "E" #'org-set-effort
-         :desc "Toggle last clock"             :n "l" #'+org/toggle-last-clock
-         :desc "Resolve Timeclocks"            :n "r" #'org-resolve-clocks
-         :desc "Time Report"                   :n "R" #'org-clock-report
-         :desc "Goto Clock"                    :n "g" #'org-clock-goto
-         :desc "Clock Jumplist"                :n "c" #'my/org-clock-jumplist
-         :desc "Cancel Clock"                  :n "C" #'org-clock-cancel)
-
-        (:when (modulep! :lang org +noter)
-          :desc "Org noter"                  "N" #'org-noter)
-        (:prefix ("m" . "roam")
-         :desc "Extract Subtree"   "x" #'org-roam-extract-subtree)
-        (:prefix ("p" . "priority")
-         :desc "Priority Up"          :n "k" #'org-priority-up
-         :desc "Priority Down"        :n "j" #'org-priority-down
-         :desc "Set Priority"         :n "p" #'org-priority)))
+ :map org-mode-map
+ :localleader
+ :desc "Org noter"                   "N" #'org-noter
+ :desc "Import Skeleton"             "S" #'org-noter-create-skeleton
+ :desc "Goto Notes page"             ";" #'org-noter-sync-current-note
+ :desc "Goto next notes page"        "j" #'org-noter-sync-prev-note
+ :desc "Goto prev notes page"        "k" #'org-noter-sync-next-note
+ :desc "Kill Noter"                  "K" #'org-noter-kill-session)
 #+end_src
 
-****** Global Org Mappings
+#+begin_src emacs-lisp :tangle no
+ (map!
+  :when (modulep! :tools pdf)
+  :map pdf-view-mode-map
+  :localleader
+  :desc "Noter"                       "n" #'org-noter
+  :desc "Insert Note"                 "i" #'org-noter-insert-note
+  :desc "Insert Skeleton"             "S" #'org-noter-create-skeleton
+  :desc "Insert Precise Note"         "I" #'org-noter-insert-precise-note
+  :desc "Kill Noter"                  "K" #'org-noter-kill-session
+  :desc "Goto pages Notes"            ";" #'org-noter-sync-current-page-or-chapter
+  :desc "Goto next page with notes"   "j" #'org-noter-sync-next-page-or-chapter
+  :desc "Goto prev page with notes"   "k" #'org-noter-sync-prev-page-or-chapter)
+#+end_src
+***** +roam
+#+begin_src emacs-lisp :tangle modules/my_lang/org/flags/roam.el :lexical t :noweb yes
+;;;###if (modulep! +roam)
+<<use_org-roam>>
+#+end_src
 
+****** Checks
+#+begin_src emacs-lisp :tangle modules/my_lang/org/doctor.el
+(when (and (modulep! +roam) (not (modulep! :lang org +roam2))
+  (warn! "The :my_lang org +roam flag is intended to be used with :lang org +roam2, not doing so is undefined behavior")
+#+end_src
 
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
+****** Packages
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-roam-packages
+:END:
+#+begin_src emacs-lisp
+(package! org-roam)
+#+end_src
+
+****** Org-Roam
+#+name: use_org-roam
+#+begin_src emacs-lisp :noweb yes
+(use-package! org-roam
+  :after org
+  :init
+  (list
+    <<modules-my_lang-org-roam-keymaps>>
+    )
+  :config
+  <<modules-my_lang-org-roam-config>>)
+#+end_src
+******* Config
+:PROPERTIES:
+:header-args:      :noweb-ref modules-my_lang-org-roam-config
+:END:
+#+begin_src emacs-lisp
+(setq org-roam-directory (expand-file-name org-directory "roam/")
+      org-roam-db-update-on-save 't
+      org-roam-extract-new-file-path "notes/%<%Y%m%d%H%M%S>-${slug}.org"
+      org-roam-file-exclude-regexp (append (mapcar #'(lambda (x) (file-truename (expand-file-name x org-directory))) '(".Trash/" "data/" "logsec/")) (list org-attach-id-dir)))
+
+(defun nom/org-roam-capture-create-id ()
+  "Create id for captured note and add it to org-roam-capture-template."
+  (when (and (not org-note-abort) (org-roam-capture-p))
+    (org-roam-capture--put :id (org-id-get-create))))
+
+(let ((noteHead "#+title: ${title}\n")
+      (postHead "#+title: ${title}\n"))
+  (setq org-roam-capture-templates
+        (list
+         (list "n" "Note" 'plain "* %i%?"
+               :target (list 'file+head "notes/%<%Y%m%d%H%M%S>-${slug}.org" noteHead)
+               :empty-lines-before 1
+               :unnarrowed 't))))
+
+(add-hook 'org-capture-prepare-finalize-hook 'nom/org-roam-capture-create-id)
+(require 'org-roam-export)
+#+end_src
+******* Keymaps
+:PROPERTIES:
+:header-args:      :noweb-ref modules-my_lang-org-roam-keymaps
+:END:
+#+begin_src emacs-lisp
 (map!
- (:leader
-  :desc "Capture"             "x"   #'org-capture
- (:prefix ("n" . "notes")
-  :desc "Find file in notes"           "f" #'+default/find-in-notes
-  :desc "Browse notes"                 "F" #'+default/browse-notes
-  :desc "Tags search"                  "m" #'org-tags-view
-  :desc "Org capture"                  "n" #'org-capture
-  :desc "Goto capture"                 "N" #'org-capture-goto-target
-  :desc "Active org-clock"             "o" #'org-clock-goto
-  :desc "Todo list"                    "T" #'org-todo-list
-  :desc "Search notes"                 "s" #'+default/org-notes-search
-  :desc "Search org agenda headlines"  "S" #'+default/org-notes-headlines
-  :desc "View search"                  "v" #'org-search-view
-  :desc "Search notes for symbol"      "*" #'+default/search-notes-for-symbol-at-point
-  :desc "Org agenda"                   "a" #'org-agenda
-  :desc "Toggle last org-clock"        "C" #'+org/toggle-last-clock
-  (:prefix ("g". "goto")
-   :desc "Last Refile"                :n "r" #'org-refile-goto-last-stored
-   :desc "Last Capture"               :n "x" #'org-capture-goto-last-stored
-   :desc "Clock"                      :n "c" #'org-clock-goto
-   :desc "Weekly Agenda Note"         :n "g" #'my/org-capture-goto-week-file
-   :desc "Project Notes"              :n "p" #'my/org-capture-goto-project-notes-file)
-  (:when (fboundp 'org-ql-search)
-    (:prefix ("q" . "query")
-     :desc "Views"               "v" #'org-ql-view
-     :desc "Find"                "f" #'org-ql-find
-     :desc "Query Entries"       "q" #'org-ql-search))
-  (:prefix ("c" . "clock")
-   :desc "Clock In"                      :n "i" #'org-clock-in
-   :desc "Clock Out"                     :n "o" #'org-clock-out
-   :desc "Clock In Last"                 :n "I" #'org-clock-in-last
-   :desc "Modify Effort"                 :n "e" #'org-clock-modify-effort-estimate
-   :desc "Toggle last clock"             :n "l" #'+org/toggle-last-clock
-   :desc "Resolve Timeclocks"            :n "r" #'org-resolve-clocks
-   :desc "Time Report"                   :n "R" #'org-clock-report
-   :desc "Goto Clock"                    :n "g" #'org-clock-goto
-   :desc "Clock Jumplist"                :n "c" #'my/org-clock-jumplist)
-  :desc "Cancel Clock"                  :n "C" #'org-clock-cancel
-  (:when (modulep! :tools biblio)
-    :desc "Bibliographic notes"        "b"
-    (cond ((modulep! :completion vertico)  #'citar-open-notes)
-          ((modulep! :completion ivy)      #'ivy-bibtex)
-          ((modulep! :completion helm)     #'helm-bibtex)))
-  (:when (modulep! :lang org +roam2)
-    :desc "Find Node"          "f" #'org-roam-node-find
-    :desc "Capture Node"       "n" #'org-roam-capture
-    (:prefix ("r" . "roam")
-             (:when (fboundp 'org-roam-ql-search)
-              :desc "Query Nodes"     "q" #'org-roam-ql-search)
-             :desc "Open random node"           "a" #'org-roam-node-random
-             :desc "Find node"                  "f" #'org-roam-node-find
-             :desc "Find ref"                   "F" #'org-roam-ref-find
-             :desc "Show graph"                 "g" #'org-roam-graph
-             :desc "Insert node"                "i" #'org-roam-node-insert
-             :desc "Capture to node"            "n" #'org-roam-capture
-             :desc "Toggle roam buffer"         "r" #'org-roam-buffer-toggle
-             :desc "Launch roam buffer"         "R" #'org-roam-buffer-display-dedicated
-             :desc "Sync database"              "s" #'org-roam-db-sync
-             (:prefix ("d" . "by date")
-              :desc "Goto previous note"        "b" #'org-roam-dailies-goto-previous-note
-              :desc "Goto date"                 "d" #'org-roam-dailies-goto-date
-              :desc "Capture date"              "D" #'org-roam-dailies-capture-date
-              :desc "Goto next note"            "f" #'org-roam-dailies-goto-next-note
-              :desc "Goto tomorrow"             "m" #'org-roam-dailies-goto-tomorrow
-              :desc "Capture tomorrow"          "M" #'org-roam-dailies-capture-tomorrow
-              :desc "Capture today"             "n" #'org-roam-dailies-capture-today
-              :desc "Goto today"                "t" #'org-roam-dailies-goto-today
-              :desc "Capture today"             "T" #'org-roam-dailies-capture-today
-              :desc "Goto yesterday"            "y" #'org-roam-dailies-goto-yesterday
-              :desc "Capture yesterday"         "Y" #'org-roam-dailies-capture-yesterday
-              :desc "Find directory"            "-" #'org-roam-dailies-find-directory))))))
+ :map org-mode-map
+ :localleader
+ :prefix ("m" . "roam")
+ :desc "Extract Subtree"      "x" #'org-roam-extract-subtree)
+
+(map!
+ :leader
+ :prefix ("n" . "notes")
+ :desc "Find Node"                   "f" #'org-roam-node-find
+ :desc "Capture Node"                "n" #'org-roam-capture
+ (:prefix ("r" . "roam")
+  :desc "Open random node"           "a" #'org-roam-node-random
+  :desc "Find node"                  "f" #'org-roam-node-find
+  :desc "Find ref"                   "F" #'org-roam-ref-find
+  :desc "Show graph"                 "g" #'org-roam-graph
+  :desc "Insert node"                "i" #'org-roam-node-insert
+  :desc "Capture to node"            "n" #'org-roam-capture
+  :desc "Toggle roam buffer"         "r" #'org-roam-buffer-toggle
+  :desc "Launch roam buffer"         "R" #'org-roam-buffer-display-dedicated
+  :desc "Sync database"              "s" #'org-roam-db-sync
+  (:prefix ("d" . "by date")
+   :desc "Goto previous note"        "b" #'org-roam-dailies-goto-previous-note
+   :desc "Goto date"                 "d" #'org-roam-dailies-goto-date
+   :desc "Capture date"              "D" #'org-roam-dailies-capture-date
+   :desc "Goto next note"            "f" #'org-roam-dailies-goto-next-note
+   :desc "Goto tomorrow"             "m" #'org-roam-dailies-goto-tomorrow
+   :desc "Capture tomorrow"          "M" #'org-roam-dailies-capture-tomorrow
+   :desc "Capture today"             "n" #'org-roam-dailies-capture-today
+   :desc "Goto today"                "t" #'org-roam-dailies-goto-today
+   :desc "Capture today"             "T" #'org-roam-dailies-capture-today
+   :desc "Goto yesterday"            "y" #'org-roam-dailies-goto-yesterday
+   :desc "Capture yesterday"         "Y" #'org-roam-dailies-capture-yesterday
+   :desc "Find directory"            "-" #'org-roam-dailies-find-directory)))
 #+end_src
 
-****** Org Agenda Mappings
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-  (map! (:leader :desc "My Agenda" :n ";" #'my/org-agenda)
-        (:map org-agenda-mode-map
-         :localleader
-         :desc "Add Id" :n "I" #'my/org-agenda-id-get-create))
+***** +roam-ui
+#+begin_src emacs-lisp :tangle modules/my_lang/org/flags/roam-ui.el :lexical t :noweb yes
+<<use_org-roam-ui>>
+<<use_websocket>>
 #+end_src
-
-**** Extras
-***** Org-Noter
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(after! org
-  (after! org-noter
-    (setq org-noter-notes-search-path (mapcar (lambda (x) (expand-file-name x org-directory)) '("agenda" "notes" "pages")))
-    (org-noter-enable-org-roam-integration)
-    (org-noter-enable-update-renames)))
+****** Packages
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-roam-ui-packages
+:END:
+#+begin_src emacs-lisp
+(package! org-roam-ui)
+(unpin! org-roam)
 #+end_src
-
-***** Org-Roam
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
-(after! org
-  (after! org-roam
-    (setq org-roam-directory (expand-file-name org-directory "roam/")
-          org-roam-db-update-on-save 't
-          org-roam-extract-new-file-path "notes/%<%Y%m%d%H%M%S>-${slug}.org"
-          org-roam-file-exclude-regexp (append (mapcar #'(lambda (x) (file-truename (expand-file-name x org-directory))) '(".Trash/" "data/" "logsec/")) (list org-attach-id-dir)))
-
-    (let ((noteHead "#+title: ${title}\n")
-          (postHead "#+title: ${title}\n"))
-      (setq org-roam-capture-templates
-            (list
-             (list "n" "Note" 'plain "* %i%?"
-                   :target (list 'file+head "notes/%<%Y%m%d%H%M%S>-${slug}.org" noteHead)
-                   :empty-lines-before 1
-                   :unnarrowed 't))))
-
-    (add-hook 'org-capture-prepare-finalize-hook 'nom/org-roam-capture-create-id)
-    (require 'org-roam-export)))
+****** Checks
+#+begin_src emacs-lisp :tangle modules/my_lang/org/doctor.el
+(when (and (modulep! +roam-ui) (not (modulep! +roam))
+  (error! "You are using the roam-ui flag without the roam flag, this is undefined behavior")
 #+end_src
-
 ****** Org-Roam-UI
-
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :lexical t
+#+name: use_org-roam-ui
+#+begin_src emacs-lisp :noweb yes
+(use-package! org-roam-ui
+  :after org-roam ;; or :after org
+  ;;  normally we'd recommend hooking orui after org-roam, but since org-roam does not have
+  ;;  a hookable mode anymore, you're advised to pick something yourself
+  ;;  if you don't care about startup time, use
+  ;;  :hook (after-init . org-roam-ui-mode)
+  :init
+  (list
+    <<org-roam-ui-keymaps>>
+    )
+  :config
+  <<org-roam-ui-config>>)
+#+end_src
+******* Keymaps
+:PROPERTIES:
+:header-args: :noweb-ref org-roam-ui-keymaps
+:END:
+******* Config
+:PROPERTIES:
+:header-args: :noweb-ref org-roam-ui-config
+:END:
+#+begin_src emacs-lisp
+(setq org-roam-ui-sync-theme t
+      org-roam-ui-follow t
+      org-roam-ui-update-on-save t
+      org-roam-ui-open-on-start t)
+#+end_src
+****** Websocket
+#+name:use_websocket
+#+begin_src emacs-lisp :noweb yes
 (use-package! websocket
     :after org-roam)
-
-(use-package! org-roam-ui
-    :after org-roam ;; or :after org
-;;  normally we'd recommend hooking orui after org-roam, but since org-roam does not have
-;;  a hookable mode anymore, you're advised to pick something yourself
-;;  if you don't care about startup time, use
-;;  :hook (after-init . org-roam-ui-mode)
-    :config
-    (setq org-roam-ui-sync-theme t
-          org-roam-ui-follow t
-          org-roam-ui-update-on-save t
-          org-roam-ui-open-on-start t))
+#+end_src
+***** +query
+#+begin_src emacs-lisp :tangle modules/my_lang/org/flags/query.el :lexical t :noweb yes
+;;;###if (modulep! +query)
+<<use_org-ql>>
+<<use_org-roam-ql>>
+<<use_org-roam-ql-ql>>
+#+end_src
+****** Packages
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-query-packages
+:END:
+#+begin_src emacs-lisp :noweb yes
+(package! org-ql)
+(when (modulep! +roam)
+  (package! org-roam-ql)
+  (package! org-roam-ql-ql))
+#+end_src
+****** Org-ql
+#+name: use_org-ql
+#+begin_src emacs-lisp
+(use-package! org-ql
+  :defer t
+  :init
+  (list
+    <<modules-my_lang-org-ql-keymaps>>
+    )
+  :config
+  <<modules-my_lang-org-ql-config>>)
+#+end_src
+******* Config
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-ql-config
+:END:
+******* Keymaps
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-ql-keymaps
+:END:
+#+begin_src emacs-lisp
+(map!
+ :leader
+ :prefix ("n" . "notes")
+ (:prefix ("q" . "query")
+  :desc "Views"               "v" #'org-ql-view
+  :desc "Find"                "f" #'org-ql-find
+  :desc "Query Entries"       "q" #'org-ql-search))
 #+end_src
 
-****** Org Roam ql
+****** Org-roam-ql
+#+name: use_org-roam-ql
+#+begin_src emacs-lisp
+(use-package! org-roam-ql
+  :defer t
+  :init
+  (list
+    <<modules-my_lang-org-roam-ql-keymaps>>
+    )
+  :config
+  <<modules-my_lang-org-roam-ql-config>>)
+#+end_src
+******* Config
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-roam-ql-config
+:END:
+******* Keymaps
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-roam-ql-keymaps
+:END:
+#+begin_src emacs-lisp
+(map!
+ :map org-roam-ql-mode-map
+ :desc "Query Dispatch" :n "q" #'org-roam-ql-buffer-dispatch)
 
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el
-(map! :when (fboundp 'org-roam-ql-buffer-dispatch)
-      :map org-roam-ql-mode-map
-      :desc "Query Dispatch" :n "q" #'org-roam-ql-buffer-dispatch)
+(map!
+ :leader
+ :prefix ("n" . "notes")
+ :desc "Query Nodes"     "q" #'org-roam-ql-search)
 #+end_src
 
-***** Org-Present
-#+begin_src emacs-lisp :tangle yes
-(after! org-present
+****** Org-roam-ql-ql
+#+name: use_org-roam-ql-ql
+#+begin_src emacs-lisp
+(use-package! org-roam-ql-ql
+  :defer t
+  :init
+  (list
+    <<modules-my_lang-org-roam-ql-ql-keymaps>>
+    )
+  :config
+  <<modules-my_lang-org-roam-ql-ql-config>>)
+#+end_src
+******* Config
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-roam-ql-ql-config
+:END:
+******* Keymaps
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-roam-ql-ql-keymaps
+:END:
+***** +present
+#+begin_src emacs-lisp :tangle modules/my_lang/org/flags/present.el :lexical t :noweb yes
+;;;###if (modulep! +present)
+<<use_org-present>>
+#+end_src
+****** Packages
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-present-packages
+:END:
+#+begin_src emacs-lisp
+(package! org-present)
+#+end_src
+****** Org-present
+#+name: use_org-present
+#+begin_src emacs-lisp :lexical t :noweb yes
+(use-package! org-present
+  :defer t
+  :init
+  (list
+    <<modules-my_lang-org-present-keymaps>>
+    )
+  :config
+  <<modules-my_lang-org-present-config>>)
+#+end_src
+******* Config
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-present-config
+:END:
+#+begin_src emacs-lisp
+;; Configure fill width
+(setq visual-fill-column-width 130
+      visual-fill-column-center-text t)
 
-  (map! :map org-mode-map
-        :i "SPC" 'nil
-        :n "J" 'nil
-        :niv "s-[" #'my/org-present-prev
-        :niv "s-]" #'my/org-present-next)
+(defun my/org-present-next (&optional ARG)
+  (interactive)
+  (unless ARG (setq ARG 1))
+  (my/org-present-change-heading ARG))
 
-  ;; Configure fill width
- (setq visual-fill-column-width 130
-       visual-fill-column-center-text t)
+(defun my/org-present-prev (&optional ARG)
+  (interactive)
+  (if ARG (setq ARG (- ARG))(setq ARG -1))
+  (my/org-present-change-heading ARG))
 
- (defun my/org-present-next (&optional ARG)
-   (interactive)
-   (unless ARG (setq ARG 1))
-   (my/org-present-change-heading ARG))
+(defun my/org-present-change-heading (ARG)
+  (doom/widen-indirectly-narrowed-buffer)
+  (org-next-visible-heading ARG)
+  (org-narrow-to-subtree)
+  (my/org-present-prepare-slide))
 
- (defun my/org-present-prev (&optional ARG)
-   (interactive)
-   (if ARG (setq ARG (- ARG))(setq ARG -1))
-   (my/org-present-change-heading ARG))
+(defun my/org-present-toggle-cursor ()
+  (interactive)
+  (if cursor-hidden (progn (org-present-show-cursor)
+                           (hl-line-mode 1)
+                           (setq cursor-hidden 'nil)
+                           (message "Cursor Shown"))
+    (progn (org-present-hide-cursor)
+           (hl-line-mode 0)
+           (setq cursor-hidden 't)
+           (message "Cursor Hidden"))))
 
- (defun my/org-present-change-heading (ARG)
-   (doom/widen-indirectly-narrowed-buffer)
-   (org-next-visible-heading ARG)
-   (org-narrow-to-subtree)
-   (my/org-present-prepare-slide))
+(defun my/org-present-start ()
+  (display-line-numbers-mode 0)
+  (hide-mode-line-mode 1)
+  (mixed-pitch-mode 1)
+  (flyspell-mode 0)
+  (flycheck-mode 0)
+  (writegood-mode 0)
+  ;; Center the presentation and wrap lines
+  (visual-fill-column-mode 1)
+  (visual-line-mode 1)
+  (org-present-show-cursor)
+  ;; Set a blank header line string to create blank space at the top
+  (setq header-line-format "")
+  ;; Tweak font sizes
+  (setq-local face-remapping-alist '((default (:height 1.3) variable-pitch)
+                                     (header-line (:height 3.7) variable-pitch)
+                                     (org-link (:height 1.3) org-drawer)
+                                     (org-document-title (:height 1.6) org-document-title)
+                                     (org-code (:height 1.25) org-code)
+                                     (org-table fixed-pitch shadow)
+                                     (org-verbatim (:height 1.3) org-verbatim)
+                                     (org-block (:height 1.1) org-block)
+                                     (org-block-begin-line (:height 0.7) org-block))))
 
- (defun my/org-present-toggle-cursor ()
-   (interactive)
-   (if cursor-hidden (progn (org-present-show-cursor)
-                            (hl-line-mode 1)
-                            (setq cursor-hidden 'nil)
-                            (message "Cursor Shown"))
-     (progn (org-present-hide-cursor)
-            (hl-line-mode 0)
-            (setq cursor-hidden 't)
-            (message "Cursor Hidden"))))
+(defun my/org-present-end ()
+  (display-line-numbers-mode 1)
+  (mixed-pitch-mode 1)
+  (hide-mode-line-mode 0)
+  (flyspell-mode 1)
+  (flycheck-mode 1)
+  (writegood-mode 1)
+  ;; Stop centering the document
+  (visual-fill-column-mode 0)
+  (visual-line-mode 0)
+  (setq header-line-format 'nil)
+  ;; Reset font customizations
+  (setq-local face-remapping-alist '((default default default))))
+;; Clear the header line format by setting to `nil'
 
- (defun my/org-present-start ()
-   (display-line-numbers-mode 0)
-   (hide-mode-line-mode 1)
-   (mixed-pitch-mode 1)
-   (flyspell-mode 0)
-   (flycheck-mode 0)
-   (writegood-mode 0)
-   ;; Center the presentation and wrap lines
-   (visual-fill-column-mode 1)
-   (visual-line-mode 1)
-   (org-present-show-cursor)
-   ;; Set a blank header line string to create blank space at the top
-   (setq header-line-format "")
-   ;; Tweak font sizes
-   (setq-local face-remapping-alist '((default (:height 1.3) variable-pitch)
-                                      (header-line (:height 3.7) variable-pitch)
-                                      (org-link (:height 1.3) org-drawer)
-                                      (org-document-title (:height 1.6) org-document-title)
-                                      (org-code (:height 1.25) org-code)
-                                      (org-verbatim (:height 1.3) org-verbatim)
-                                      (org-block (:height 1.1) org-block)
-                                      (org-block-begin-line (:height 0.7) org-block)))
-   )
+(defun my/org-present-prepare-slide ()
+  ;; Show only top-level headlines
+  (org-overview)
 
- (defun my/org-present-end ()
-   (display-line-numbers-mode 1)
-   (mixed-pitch-mode 1)
-   (hide-mode-line-mode 0)
-   (flyspell-mode 1)
-   (flycheck-mode 1)
-   (writegood-mode 1)
-   ;; Stop centering the document
-   (visual-fill-column-mode 0)
-   (visual-line-mode 0)
-   (setq header-line-format 'nil)
-   ;; Reset font customizations
-   (setq-local face-remapping-alist '((default default default))))
-  ;; Clear the header line format by setting to `nil'
+  ;; Unfold the current entry
+  (org-show-entry)
 
- (defun my/org-present-prepare-slide ()
-   ;; Show only top-level headlines
-   (org-overview)
+  ;; Show only direct subheadings of the slide but don't expand them
+  (org-show-children))
 
-   ;; Unfold the current entry
-   (org-show-entry)
+(defun my/org-present-navigate (buffer-name heading)
+  (my/org-present-prepare-slide))
 
-   ;; Show only direct subheadings of the slide but don't expand them
-   (org-show-children))
-
- (defun my/org-present-navigate (buffer-name heading)
-   (my/org-present-prepare-slide))
-
-  ;; Register hooks with org-present
- (add-hook 'org-present-after-navigate-functions 'my/org-present-navigate)
- (add-hook 'org-present-mode-hook 'my/org-present-start)
- (add-hook 'org-present-mode-quit-hook 'my/org-present-end))
+;; Register hooks with org-present
+(add-hook 'org-present-after-navigate-functions 'my/org-present-navigate)
+(add-hook 'org-present-mode-hook 'my/org-present-start)
+(add-hook 'org-present-mode-quit-hook 'my/org-present-end)
+#+end_src
+******* Keymaps
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-present-keymaps
+:END:
+#+begin_src emacs-lisp
+(map!
+ :map org-mode-map
+ :i "SPC" 'nil
+ :n "J" 'nil
+ :niv "s-[" #'my/org-present-prev
+ :niv "s-]" #'my/org-present-next)
+#+end_src
+***** +hugo
+#+begin_src emacs-lisp :lexical t :noweb yes
+;;;###if (modulep! +hugo)
+<<use_ox-hugo>>
 #+end_src
 
-#+RESULTS:
-| my/org-present-end |
-
-***** Org-Hugo
-#+begin_src emacs-lisp :tangle yes
-(after! org (require 'ox-hugo))
+****** Packages
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-org-hugo-packages
+:END:
+#+begin_src emacs-lisp
+(package! ox-hugo)
 #+end_src
+****** Ox-hugo
+#+name: use_ox-hugo
+#+begin_src emacs-lisp :noweb yes
+(use-package! ox-hugo
+  :after ox
+  :init
+  (list
+    <<modules-my_lang-ox-hugo-keymaps>>
+    )
+  :config
+  <<modules-my_lang-ox-hugo-config>>)
+    #+end_src
+******* Config
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-ox-hugo-config
+:END:
+******* Keymaps
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_lang-ox-hugo-keymaps
+:END:
 ***** Archive :ARCHIVE:
 ****** TODO NotDeft
 :PROPERTIES:
@@ -1117,54 +1686,99 @@ When enabled make sure ~org-modern-mode~ is used in org buffers.
                 (substring contents end-of-begin end)
                 (format "%s" file)))))))
 #+end_src
-*** SQL
+*** TODO SQL
 #+begin_src emacs-lisp :tangle packages.el
 (package! sql-indent)
 #+end_src
 
 #+begin_src emacs-lisp :tangle keymaps.el
 (map!
-    :map sql-mode-map
-    :localleader
-    :desc "SQL Connect to REPL"             "m" #'sql-connect
-    :desc "Set SQL Product"                 "M" #'sql-set-product
-    :desc "Execute Paragraph"               "p" #'lsp-sql-execute-paragraph
-    :desc "Send Paragraph to REPL"          "P" #'sql-send-paragraph
-    :desc "Send Buffer to REPL"             "b" #'sql-send-buffer
-    :desc "Send String to REPL"             "q" #'sql-send-string
-    :desc "Execute Region or Buffer"        "r" #'lsp-sql-execute-query
-    :desc "Send Region to REPL"          :v "R" #'sql-send-region
-    :desc "Toggle Goto After Send"          "t" #'sql-toggle-pop-to-buffer-after-send-region
-    :desc "Switch Connection"               "c" #'lsp-sql-switch-connection
-    :desc "Show Connections"                "C" #'lsp-sql-show-connections
-    :desc "Switch Database"                 "d" #'lsp-sql-switch-database
-    :desc "Show Databases"                  "D" #'lsp-sql-show-databases
-    :desc "List Table"                      "l" #'sql-list-table
-    :desc "List All"                        "L" #'sql-list-all)
-
+ :map sql-mode-map
+ :localleader
+ :desc "SQL Connect to REPL"             "m" #'sql-connect
+ :desc "Set SQL Product"                 "M" #'sql-set-product
+ :desc "Execute Paragraph"               "p" #'lsp-sql-execute-paragraph
+ :desc "Send Paragraph to REPL"          "P" #'sql-send-paragraph
+ :desc "Send Buffer to REPL"             "b" #'sql-send-buffer
+ :desc "Send String to REPL"             "q" #'sql-send-string
+ :desc "Execute Region or Buffer"        "r" #'lsp-sql-execute-query
+ :desc "Send Region to REPL"          :v "R" #'sql-send-region
+ :desc "Toggle Goto After Send"          "t" #'sql-toggle-pop-to-buffer-after-send-region
+ :desc "Switch Connection"               "c" #'lsp-sql-switch-connection
+ :desc "Show Connections"                "C" #'lsp-sql-show-connections
+ :desc "Switch Database"                 "d" #'lsp-sql-switch-database
+ :desc "Show Databases"                  "D" #'lsp-sql-show-databases
+ :desc "List Table"                      "l" #'sql-list-table
+ :desc "List All"                        "L" #'sql-list-all)
 #+end_src
 
 #+begin_src emacs-lisp :tangle config.el
 (add-hook 'sql-mode-hook 'lsp)
 #+end_src
-*** Kotlin
+*** TODO Kotlin
 #+begin_src emacs-lisp :tangle yes
 (org-babel-do-load-languages 'org-babel-load-languages '((java . t)
                                                          (kotlin . t)))
 #+end_src
 
-** TODO My_Tools
+** My_Tools
 *** Mail
+**** README
+- *Flags*:
+**** Packages
+Install packages required by this module according to other modules and flags set
+#+begin_src emacs-lisp :tangle modules/my_tools/mail/packages.el :lexical t
+#+end_src
+**** Checks
+Modules sanity checks run on ~doom doctor~
+***** Mu Binary Dependency
+#+begin_src emacs-lisp :tangle modules/my_tools/mail/doctor.el :lexical t
+(unless (executable-find "mu")
+  (warn! "`mu` executable could not be found, Please install it and make sure it is on your PATH"))
+#+end_src
+
+#+RESULTS:
+
+***** Mbsync Binary Dependency
+#+begin_src emacs-lisp :tangle modules/my_tools/mail/doctor.el :lexical t
+(unless (executable-find "mbsync")
+  (warn! "`mbsync` executable could not be found, Please install it and make sure it is on your PATH"))
+#+end_src
+
+#+RESULTS:
+
+***** Msmtp Binary Dependency
+#+begin_src emacs-lisp :tangle modules/my_tools/mail/doctor.el :lexical t
+(unless (executable-find "msmtp")
+  (warn! "`msmtp` executable could not be found, Please install it and make sure it is on your PATH"))
+#+end_src
+
+#+RESULTS:
+
+kj
 **** Configuration
-***** General
-#+begin_src emacs-lisp :tangle config.el
+The bulk of the modules actual configuration
+***** Definitions
+I like to separate out the definitions of variables and functions from the rest
+of the module so that it is out of the way and also because definitions tend to
+be more self-documenting.
+#+begin_src emacs-lisp :tangle modules/my_tools/mail/config.el :lexical t
 ;; For rendering html email
 (defun my-render-html-message ()
   (let ((dom (libxml-parse-html-region (point-min) (point-max))))
     (erase-buffer)
     (shr-insert-document dom)
     (goto-char (point-min))))
+#+end_src
 
+***** Keymaps
+By seperating keymaps from the rest of the configuration we keep the related
+things together and make it easy to modify related keymappings.
+#+begin_src emacs-lisp :tangle modules/my_tools/mail/config.el :lexical t
+#+end_src
+
+***** General
+#+begin_src emacs-lisp :tangle modules/my_tools/mail/config.el :lexical t
 (setq mu4e-html2text-command 'my-render-html-message)
 
 (setq
@@ -1178,29 +1792,24 @@ When enabled make sure ~org-modern-mode~ is used in org buffers.
     mu4e-index-cleanup nil      ;; don't do a full cleanup check
     mu4e-index-lazy-check t    ;; don't consider up-to-date dirs
     mu4e-user-mail-address-list '("carson03henrich@gmail.com" "carson3henrich@gmail.com" "henricc5@wwu.edu")
-    mu4e-maildir-shortcuts '(
-                             ("/gmail1/Inbox" . ?i)
+    mu4e-maildir-shortcuts '(("/gmail1/Inbox" . ?i)
                              ("/gmail1/Important" . ?j)
                              ("/gmail1/Sent" . ?s)
                              ("/gmail1/Drafts" . ?d)
                              ("/school/Inbox" . ?I)
                              ("/school/Important" . ?J)
                              ("/school/Sent" . ?S)
-                             ("/school/Drafts" . ?D)
-                             ))
+                             ("/school/Drafts" . ?D)))
 
 (with-eval-after-load "mm-decode"
   (add-to-list 'mm-discouraged-alternatives "text/html")
   (add-to-list 'mm-discouraged-alternatives "text/richtext"))
 #+end_src
 
-#+RESULTS:
-| text/richtext | text/html |
-
 ***** Bookmarks
 the following is to show shortcuts in the main view.
 
-#+begin_src emacs-lisp :tangle config.el
+#+begin_src emacs-lisp :tangle modules/my_tools/mail/config.el :lexical t
 (setq mu4e-bookmarks
   '((:name "Unread messages"           :query "flag:unread AND NOT flag:trashed" :key 117)
     (:name "Today's messages"          :query "date:today..now"                  :key 116)
@@ -1213,64 +1822,60 @@ the following is to show shortcuts in the main view.
     (:name "Inbox - Western"           :query "maildir:/school/Inbox"            :key ?w)))
 #+end_src
 
-#+RESULTS:
-| :name | Unread messages           | :query | flag:unread AND NOT flag:trashed | :key | 117 |              |   |
-| :name | Today's messages          | :query | date:today..now                  | :key | 116 |              |   |
-| :name | Last 7 days               | :query | date:7d..now                     | :key | 119 | :hide-unread | t |
-| :name | Messages with images      | :query | mime:image/*                     | :key | 112 |              |   |
-| :name | Flagged messages          | :query | flag:flagged                     | :key | 102 |              |   |
-| :name | Inbox - Gmail (Primary)   | :query | maildir:/gmail1/Inbox            | :key | 103 |              |   |
-| :name | Inbox - Gmail (Secondary) | :query | maildir:/gmail2/Inbox            | :key | 103 |              |   |
-| :name | Inbox - Western           | :query | maildir:/school/Inbox            | :key | 119 |              |   |
-
 ***** Contexts
-#+begin_src emacs-lisp :tangle config.el
-(set-email-account! "gmail1"
-          '((user-mail-address . "carson03henrich@gmail.com")
-            (user-full-name . "Carson Henrich")
-            (smtpmail-smtp-user "carson03henrich@gmail.com")
-            (mu4e-drafts-folder . "/gmail1/Drafts")
-            (mu4e-refile-folder . "/gmail1/Archive")
-            (mu4e-sent-folder . "/gmail1/Sent")
-            (mu4e-trash-folder . "/gmail1/Trash")
-            (mu4e-compose-signature . "---\nCarson Henrich")))
+#+begin_src emacs-lisp :tangle modules/my_tools/mail/config.el :lexical t
+(after! mu4e (setq mu4e-contexts
+      (list
+       (make-mu4e-context
+        :name "gmail1"
+        :match-func
+        (lambda (msg)
+          (when msg
+            (string-prefix-p "/gmail1" (mu4e-message-field msg :maildir))))
+        :vars '((user-mail-address . "carson03henrich@gmail.com")
+                (user-full-name . "Carson Henrich")
+                (smtpmail-smtp-user "carson03henrich@gmail.com")
+                (mu4e-drafts-folder . "/gmail1/Drafts")
+                (mu4e-refile-folder . "/gmail1/Archive")
+                (mu4e-sent-folder . "/gmail1/Sent")))
+       (make-mu4e-context
+        :name "gmail2"
+        :match-func
+        (lambda (msg)
+          (when msg
+            (string-prefix-p "/gmail2" (mu4e-message-field msg :maildir))))
+        :vars '((user-mail-address . "carson3henrich@gmail.com")
+                (user-full-name . "Carson Henrich")
+                (smtpmail-smtp-user "carson3henrich@gmail.com")
+                (mu4e-drafts-folder . "/gmail2/Drafts")
+                (mu4e-refile-folder . "/gmail2/Archive")
+                (mu4e-sent-folder . "/gmail2/Sent")
+                (mu4e-trash-folder . "/gmail2/Trash")))
+       (make-mu4e-context
+        :name "Western"
+        :match-func
+        (lambda (msg)
+          (when msg
+            (string-prefix-p "/school" (mu4e-message-field msg :maildir))))
+        :vars '((user-mail-address . "carson03henrich@gmail.com")
+                (user-full-name . "Carson Henrich")
+                (smtpmail-smtp-user "henricc5@wwu.edu")
+                (mu4e-drafts-folder . "/school/Drafts")
+                (mu4e-refile-folder . "/school/Archive")
+                (mu4e-sent-folder . "/school/Sent")
+                (mu4e-trash-folder . "/school/Trash")))))
 
-
-(set-email-account! "gmail2"
-          '((user-mail-address . "carson3henrich@gmail.com")
-            (user-full-name . "Carson Henrich")
-            (smtpmail-smtp-user "carson3henrich@gmail.com")
-            (mu4e-drafts-folder . "/gmail2/Drafts")
-            (mu4e-refile-folder . "/gmail2/Archive")
-            (mu4e-sent-folder . "/gmail2/Sent")
-            (mu4e-trash-folder . "/gmail2/Trash")
-            (mu4e-compose-signature . "---\nCarson Henrich")))
-
-(set-email-account! "Western"
-          '((user-mail-address . "henricc5@wwu.edu")
-            (user-full-name . "Carson Henrich")
-            (smtpmail-smtp-user "henricc5@wwu.edu")
-            (mu4e-drafts-folder . "/school/Drafts")
-            (mu4e-refile-folder . "/school/Archive")
-            (mu4e-sent-folder . "/school/Sent")
-            (mu4e-trash-folder . "/school/Trash")
-            (mu4e-compose-signature . "---\nCarson Henrich")))
-
-(setq mu4e-context-policy 'pick-first) ;; start with the first (default) context;
-(setq mu4e-compose-context-policy 'ask) ;; ask for context if no context matches;
+(setq mu4e-compose-context-policy 'ask)) ;; ask for context if no context matches;
 #+end_src
 
-#+RESULTS:
-: ask
-
 ***** Sending
-#+begin_src emacs-lisp :tangle config.el
+#+begin_src emacs-lisp :tangle modules/my_tools/mail/config.el :lexical t
 ;; gpg encryptiom & decryption:
 ;; this can be left alone
 (require 'epa-file)
 (epa-file-enable)
 (setq epa-pinentry-mode 'loopback)
-(auth-source-forget-all-cached)
+;; (auth-source-forget-all-cached)
 
 ;; don't keep message compose buffers around after sending:
 (setq message-kill-buffer-on-exit t)
@@ -1320,11 +1925,8 @@ the following is to show shortcuts in the main view.
 (add-hook 'mu4e-compose-mode-hook 'company-mode)
 #+end_src
 
-#+RESULTS:
-| org-msg-post-setup | company-mode | timu/add-cc-and-bcc | flyspell-mode |
-
 ***** Options
-#+begin_src emacs-lisp :tangle config.el
+#+begin_src emacs-lisp :tangle modules/my_tools/mail/config.el :lexical t
 ;; store link to message if in header view, not to header query:
 (setq org-mu4e-link-query-in-headers-mode nil)
 
@@ -1342,12 +1944,8 @@ the following is to show shortcuts in the main view.
 
 ;; M-x find-function RET message-citation-line-format for docs:
 (setq message-citation-line-function 'message-insert-formatted-citation-line)
-
-;; Accept iCal Invites from email
-(require 'mu4e-icalendar)
-(mu4e-icalendar-setup)
 #+end_src
-*** RSS
+*** TODO RSS
 #+begin_src emacs-lisp :tangle config.el
 (defun ime-elfeed-podcast-tagger (entry)
   (when (elfeed-entry-enclosures entry)
@@ -1359,7 +1957,7 @@ the following is to show shortcuts in the main view.
 (after! org (setq rmh-elfeed-org-files (list (expand-file-name "elfeed.org" org-directory))))
 #+end_src
 
-*** AI
+*** TODO AI
 **** Whisper
 #+begin_src emacs-lisp :tangle yes
 (after! whisper
@@ -1443,6 +2041,9 @@ If `DEVICE-NAME' is provided, it will be used instead of prompting the user."
               ("C-TAB" . 'copilot-accept-completion-by-word)
               ("C-<tab>" . 'copilot-accept-completion-by-word)))
 #+end_src
+*** TODO Jira
+**** README
+**** Configuration
 * Temporary Fixes
 Here is a place where I can place /temporary/ fixes to bugs that have cropped up
 while using my configuration. I say that they are temporary because they are
@@ -2079,22 +2680,22 @@ Need to set up treesitter such that it is used whenever it can be.
 (map!
  (:after printing (:desc "Print" "s-p"   #'pr-interface))
  (:when (modulep! :tools collab) (:prefix ("l" . "live share/collab")
-  :desc "Switch to a shared buffer"      "b"   #'crdt-switch-to-buffer
-  :desc "Connect to a session"           "c"   #'crdt-connect
-  :desc "Disconnect from session"        "d"   #'crdt-disconnect
-  :desc "Toggle following user's cursor" "f"   #'crdt-follow-user
-  :desc "Stop following user if any"     "F"   #'crdt-stop-follow
-  :desc "Goto another user's cursor"     "g"   #'crdt-goto-user
-  :desc "List shared buffers"            "i"   #'crdt-list-buffers
-  :desc "Kick a user (host only)"        "k"   #'crdt-kill-user
-  :desc "List sessions"                  "l"   #'crdt-list-sessions
-  :desc "Share current buffer"           "s"   #'crdt-share-buffer
-  :desc "Stop sharing current buffer"    "S"   #'crdt-stop-share-buffer
-  :desc "List connected users"           "u"   #'crdt-list-users
-  :desc "Stop a session (host only)"     "x"   #'crdt-stop-session
-  :desc "Copy URL of current session"    "y"   #'crdt-copy-url
-  :desc "Goto next user's cursor"        "]"   #'crdt-goto-next-user
-  :desc "Goto previous user's cursor"    "["   #'crdt-goto-prev-user))
+                                  :desc "Switch to a shared buffer"      "b"   #'crdt-switch-to-buffer
+                                  :desc "Connect to a session"           "c"   #'crdt-connect
+                                  :desc "Disconnect from session"        "d"   #'crdt-disconnect
+                                  :desc "Toggle following user's cursor" "f"   #'crdt-follow-user
+                                  :desc "Stop following user if any"     "F"   #'crdt-stop-follow
+                                  :desc "Goto another user's cursor"     "g"   #'crdt-goto-user
+                                  :desc "List shared buffers"            "i"   #'crdt-list-buffers
+                                  :desc "Kick a user (host only)"        "k"   #'crdt-kill-user
+                                  :desc "List sessions"                  "l"   #'crdt-list-sessions
+                                  :desc "Share current buffer"           "s"   #'crdt-share-buffer
+                                  :desc "Stop sharing current buffer"    "S"   #'crdt-stop-share-buffer
+                                  :desc "List connected users"           "u"   #'crdt-list-users
+                                  :desc "Stop a session (host only)"     "x"   #'crdt-stop-session
+                                  :desc "Copy URL of current session"    "y"   #'crdt-copy-url
+                                  :desc "Goto next user's cursor"        "]"   #'crdt-goto-next-user
+                                  :desc "Goto previous user's cursor"    "["   #'crdt-goto-prev-user))
 
     ;;; <leader> o --- open
  (:leader :prefix ("o" . "open")
@@ -2171,13 +2772,13 @@ Need to set up treesitter such that it is used whenever it can be.
   (:when (modulep! :email wanderlust)
     :desc "wanderlust" "m" #'=wanderlust)))
 
- (map! :leader
-       :prefix ("l"."Language Models")
-       (:after (fboundp 'copilot-mode)
-        :desc "Complete" "<tab>" #'copilot-mode)
-       (:when (fboundp 'whisper-run)
+(map! :leader
+      :prefix ("l"."Language Models")
+      (:after (fboundp 'copilot-mode)
+       :desc "Complete" "<tab>" #'copilot-mode)
+      (:when (fboundp 'whisper-run)
         :desc "Whisper" "w" #'whisper-run)
-       (:when (fboundp 'ellama-chat)
+      (:when (fboundp 'ellama-chat)
         :desc "Chat" "e" #'ellama-chat
         :desc "Change" "C" #'ellama-change
         :desc "Provider Selection" "p" #'ellama-provider-select
@@ -2201,93 +2802,72 @@ Need to set up treesitter such that it is used whenever it can be.
          :desc "Edit" "e" #'ellama-code-edit
          :desc "Add" "a" #'ellama-code-add)))
 
-    ;;; <leader> r --- remote
- (map! (:when (modulep! :tools upload) (:leader :prefix ("r" . "remote")
-                                  :desc "Browse remote"              "b" #'ssh-deploy-browse-remote-base-handler
-                                  :desc "Browse relative"            "B" #'ssh-deploy-browse-remote-handler
-                                  :desc "Download remote"            "d" #'ssh-deploy-download-handler
-                                  :desc "Delete local & remote"      "D" #'ssh-deploy-delete-handler
-                                  :desc "Eshell base terminal"       "e" #'ssh-deploy-remote-terminal-eshell-base-handler
-                                  :desc "Eshell relative terminal"   "E" #'ssh-deploy-remote-terminal-eshell-handler
-                                  :desc "Move/rename local & remote" "m" #'ssh-deploy-rename-handler
-                                  :desc "Open this file on remote"   "o" #'ssh-deploy-open-remote-file-handler
-                                  :desc "Run deploy script"          "s" #'ssh-deploy-run-deploy-script-handler
-                                  :desc "Upload local"               "u" #'ssh-deploy-upload-handler
-                                  :desc "Upload local (force)"       "U" #'ssh-deploy-upload-handler-forced
-                                  :desc "Diff local & remote"        "x" #'ssh-deploy-diff-handler
-                                  :desc "Browse remote files"        "." #'ssh-deploy-browse-remote-handler
-                                  :desc "Detect remote changes"      ">" #'ssh-deploy-remote-changes-handler))
+   ;;; <leader> r --- remote
+(map! (:when (modulep! :tools upload) (:leader :prefix ("r" . "remote")
+                                       :desc "Browse remote"              "b" #'ssh-deploy-browse-remote-base-handler
+                                       :desc "Browse relative"            "B" #'ssh-deploy-browse-remote-handler
+                                       :desc "Download remote"            "d" #'ssh-deploy-download-handler
+                                       :desc "Delete local & remote"      "D" #'ssh-deploy-delete-handler
+                                       :desc "Eshell base terminal"       "e" #'ssh-deploy-remote-terminal-eshell-base-handler
+                                       :desc "Eshell relative terminal"   "E" #'ssh-deploy-remote-terminal-eshell-handler
+                                       :desc "Move/rename local & remote" "m" #'ssh-deploy-rename-handler
+                                       :desc "Open this file on remote"   "o" #'ssh-deploy-open-remote-file-handler
+                                       :desc "Run deploy script"          "s" #'ssh-deploy-run-deploy-script-handler
+                                       :desc "Upload local"               "u" #'ssh-deploy-upload-handler
+                                       :desc "Upload local (force)"       "U" #'ssh-deploy-upload-handler-forced
+                                       :desc "Diff local & remote"        "x" #'ssh-deploy-diff-handler
+                                       :desc "Browse remote files"        "." #'ssh-deploy-browse-remote-handler
+                                       :desc "Detect remote changes"      ">" #'ssh-deploy-remote-changes-handler))
 
 
 
-    ;;; <leader> s --- search
- (:leader :prefix ("s" . "search")
-  :desc "Search current directory"     "d" #'+default/search-cwd
-  :desc "Search other directory"       "D" #'+default/search-other-cwd
-  :desc "Search .emacs.d"              "e" #'+default/search-emacsd
-  :desc "Locate file"                  "f" #'locate
-  :desc "Jump to symbol"               "i" #'imenu
-  :desc "Jump to visible link"         "l" #'link-hint-open-link
-  :desc "Jump to link"                 "L" #'ffap-menu
-  :desc "Jump list"                    "j" #'evil-show-jumps
-  :desc "Jump to bookmark"             "m" #'bookmark-jump
-  :desc "Look up online"               "o" #'+lookup/online
-  :desc "Look up online (w/ prompt)"   "O" #'+lookup/online-select
-  :desc "Look up in local docsets"     "k" #'+lookup/in-docsets
-  :desc "Look up in all docsets"       "K" #'+lookup/in-all-docsets
-  :desc "Search project"               "p" #'+default/search-project
-  :desc "Search other project"         "P" #'+default/search-other-project
-  :desc "Jump to mark"                 "r" #'evil-show-marks
-  :desc "Search buffer"                "s" #'+default/search-buffer
-  :desc "Dictionary"                   "t" #'+lookup/dictionary-definition
-  :desc "Thesaurus"                    "T" #'+lookup/synonyms
-  :desc "Search all open buffers"      "B"
-  (cond ((modulep! :completion vertico)   (cmd!! #'consult-line-multi 'all-buffers))
-        ((modulep! :completion ivy)       #'swiper-all)
-        ((modulep! :completion helm)      #'swiper-all))
-  :desc "Search buffer"                "b"
-  (cond ((modulep! :completion vertico)   #'+default/search-buffer)
-        ((modulep! :completion ivy)       #'swiper)
-        ((modulep! :completion helm)      #'swiper))
-  :desc "Jump to symbol in open buffers" "I"
-  (cond ((modulep! :completion vertico)   #'consult-imenu-multi)
-        ((modulep! :completion helm)      #'helm-imenu-in-all-buffers))
-  :desc "Search buffer for thing at point" "S"
-  (cond ((modulep! :completion vertico)   #'+vertico/search-symbol-at-point)
-        ((modulep! :completion ivy)       #'swiper-isearch-thing-at-point)
-        ((modulep! :completion helm)      #'swiper-isearch-thing-at-point))
-  (:when (fboundp 'vundo)
-    :desc "Undo history"               "u" #'vundo))
+   ;;; <leader> s --- search
+      (:leader :prefix ("s" . "search")
+       :desc "Search current directory"     "d" #'+default/search-cwd
+       :desc "Search other directory"       "D" #'+default/search-other-cwd
+       :desc "Search .emacs.d"              "e" #'+default/search-emacsd
+       :desc "Locate file"                  "f" #'locate
+       :desc "Jump to symbol"               "i" #'imenu
+       :desc "Jump to visible link"         "l" #'link-hint-open-link
+       :desc "Jump to link"                 "L" #'ffap-menu
+       :desc "Jump list"                    "j" #'evil-show-jumps
+       :desc "Jump to bookmark"             "m" #'bookmark-jump
+       :desc "Look up online"               "o" #'+lookup/online
+       :desc "Look up online (w/ prompt)"   "O" #'+lookup/online-select
+       :desc "Look up in local docsets"     "k" #'+lookup/in-docsets
+       :desc "Look up in all docsets"       "K" #'+lookup/in-all-docsets
+       :desc "Search project"               "p" #'+default/search-project
+       :desc "Search other project"         "P" #'+default/search-other-project
+       :desc "Jump to mark"                 "r" #'evil-show-marks
+       :desc "Search buffer"                "s" #'+default/search-buffer
+       :desc "Dictionary"                   "t" #'+lookup/dictionary-definition
+       :desc "Thesaurus"                    "T" #'+lookup/synonyms
+       :desc "Search all open buffers"      "B"
+       (cond ((modulep! :completion vertico)   (cmd!! #'consult-line-multi 'all-buffers))
+             ((modulep! :completion ivy)       #'swiper-all)
+             ((modulep! :completion helm)      #'swiper-all))
+       :desc "Search buffer"                "b"
+       (cond ((modulep! :completion vertico)   #'+default/search-buffer)
+             ((modulep! :completion ivy)       #'swiper)
+             ((modulep! :completion helm)      #'swiper))
+       :desc "Jump to symbol in open buffers" "I"
+       (cond ((modulep! :completion vertico)   #'consult-imenu-multi)
+             ((modulep! :completion helm)      #'helm-imenu-in-all-buffers))
+       :desc "Search buffer for thing at point" "S"
+       (cond ((modulep! :completion vertico)   #'+vertico/search-symbol-at-point)
+             ((modulep! :completion ivy)       #'swiper-isearch-thing-at-point)
+             ((modulep! :completion helm)      #'swiper-isearch-thing-at-point))
+       (:when (fboundp 'vundo)
+         :desc "Undo history"               "u" #'vundo))
 
 
- (:when (modulep! :lang org +noter)
-   (:map org-mode-map
-    :localleader
-    :desc "Import Skeleton"             "S" #'org-noter-create-skeleton
-    :desc "Goto Notes page"             ";" #'org-noter-sync-current-note
-    :desc "Goto next notes page"        "j" #'org-noter-sync-prev-note
-    :desc "Goto prev notes page"        "k" #'org-noter-sync-next-note
-    :desc "Kill Noter"                  "K" #'org-noter-kill-session))
-
- (:when (modulep! :tools pdf)
-   (:map pdf-view-mode-map
-         (:localleader
-          :desc "Center"                    "c" #'pdf-view-center-in-window
-          :desc "Rotate"                    "r" #'pdf-view-rotate
-          :desc "Recolor"                   "R" #'pdf-view-themed-minor-mode)
-         (:when (modulep! :lang org +noter)
-           (:localleader
-            :desc "Noter"                       "n" #'org-noter
-            :desc "Insert Note"                 "i" #'org-noter-insert-note
-            :desc "Insert Skeleton"             "S" #'org-noter-create-skeleton
-            :desc "Insert Precise Note"         "I" #'org-noter-insert-precise-note
-            :desc "Kill Noter"                  "K" #'org-noter-kill-session
-            :desc "Goto pages Notes"            ";" #'org-noter-sync-current-page-or-chapter
-            :desc "Goto next page with notes"   "j" #'org-noter-sync-next-page-or-chapter
-            :desc "Goto prev page with notes"   "k" #'org-noter-sync-prev-page-or-chapter)))))
+      (:when (modulep! :tools pdf)
+        (:map pdf-view-mode-map
+              (:localleader
+               :desc "Center"                    "c" #'pdf-view-center-in-window
+               :desc "Rotate"                    "r" #'pdf-view-rotate
+               :desc "Recolor"                   "R" #'pdf-view-themed-minor-mode))))
 #+end_src
-
-#+RESULTS:
 
 *** Other
 #+begin_src emacs-lisp :tangle keymaps.el :lexical t
@@ -2344,6 +2924,9 @@ Need to set up treesitter such that it is used whenever it can be.
         :desc "Restart & restore Emacs"      "r" #'doom/restart-and-restore
         :desc "Restart Emacs"                "R" #'doom/restart))
 #+end_src
+
+#+RESULTS:
+: doom/restart
 
 *** Programming
 **** Code
@@ -2557,3 +3140,4 @@ Consider adding this file to your list of agenda files so that events show up th
 :PROPERTIES:
 :ARCHIVE_TIME: 2024-07-17 Wed 17:43
 :END:
+
