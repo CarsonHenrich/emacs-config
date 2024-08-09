@@ -1859,108 +1859,58 @@ Packages included with this flag
 
 ** My_Tools
 *** Mail
-**** README
-- *Flags*:
 **** Packages
 Install packages required by this module according to other modules and flags set
 #+begin_src emacs-lisp :tangle modules/my_tools/mail/packages.el :lexical t
 #+end_src
 **** Checks
+:PROPERTIES:
+:header-args: :tangle modules/my_tools/mail/doctor.el :lexical t
+:END:
 Modules sanity checks run on ~doom doctor~
 ***** Mu Binary Dependency
-#+begin_src emacs-lisp :tangle modules/my_tools/mail/doctor.el :lexical t
+#+begin_src emacs-lisp
 (unless (executable-find "mu")
   (warn! "`mu` executable could not be found, Please install it and make sure it is on your PATH"))
 #+end_src
 
-#+RESULTS:
-
 ***** Mbsync Binary Dependency
-#+begin_src emacs-lisp :tangle modules/my_tools/mail/doctor.el :lexical t
+#+begin_src emacs-lisp
 (unless (executable-find "mbsync")
   (warn! "`mbsync` executable could not be found, Please install it and make sure it is on your PATH"))
 #+end_src
-
-#+RESULTS:
-
 ***** Msmtp Binary Dependency
-#+begin_src emacs-lisp :tangle modules/my_tools/mail/doctor.el :lexical t
+#+begin_src emacs-lisp
 (unless (executable-find "msmtp")
   (warn! "`msmtp` executable could not be found, Please install it and make sure it is on your PATH"))
 #+end_src
-
-#+RESULTS:
-
-kj
 **** Configuration
 The bulk of the modules actual configuration
-***** Definitions
-I like to separate out the definitions of variables and functions from the rest
-of the module so that it is out of the way and also because definitions tend to
-be more self-documenting.
-#+begin_src emacs-lisp :tangle modules/my_tools/mail/config.el :lexical t
-;; For rendering html email
-(defun my-render-html-message ()
-  (let ((dom (libxml-parse-html-region (point-min) (point-max))))
-    (erase-buffer)
-    (shr-insert-document dom)
-    (goto-char (point-min))))
+#+begin_src emacs-lisp :tangle modules/my_tools/mail/config.el
+<<modules-my_tools-mail-config>>
+<<modules-my_tools-mail-use-packages>>
+<<modules-load_flags>>
 #+end_src
 
-***** Keymaps
-By seperating keymaps from the rest of the configuration we keep the related
-things together and make it easy to modify related keymappings.
-#+begin_src emacs-lisp :tangle modules/my_tools/mail/config.el :lexical t
+***** Use Packages
+:PROPERTIES:
+:header-args: :noweb-ref modules-my_tools-mail-use-packages
+:END:
+****** Mu4e
+#+begin_src emacs-lisp :noweb yes
+(use-package! mu4e
+  :init
+  <<mu4e-init>>
+  <<mu4e-keymaps>>
+  :config
+  <<mu4e-config>>)
 #+end_src
-
-***** General
-#+begin_src emacs-lisp :tangle modules/my_tools/mail/config.el :lexical t
-(setq mu4e-html2text-command 'my-render-html-message)
-
-(setq
-    mu4e-mu-binary (executable-find "mu")
-    mu4e-maildir "~/.maildir"
-    mu4e-get-mail-command (concat (executable-find "mbsync") " -a")
-    mu4e-update-interval 300 ;; seconds
-    mu4e-attachment-dir "~/Desktop"
-    mu4e-change-filenames-when-moving 't
-    mu4e-split-view 'horizontal
-    mu4e-index-cleanup nil      ;; don't do a full cleanup check
-    mu4e-index-lazy-check t    ;; don't consider up-to-date dirs
-    mu4e-user-mail-address-list '("carson03henrich@gmail.com" "carson3henrich@gmail.com" "henricc5@wwu.edu")
-    mu4e-maildir-shortcuts '(("/gmail1/Inbox" . ?i)
-                             ("/gmail1/Important" . ?j)
-                             ("/gmail1/Sent" . ?s)
-                             ("/gmail1/Drafts" . ?d)
-                             ("/school/Inbox" . ?I)
-                             ("/school/Important" . ?J)
-                             ("/school/Sent" . ?S)
-                             ("/school/Drafts" . ?D)))
-
-(with-eval-after-load "mm-decode"
-  (add-to-list 'mm-discouraged-alternatives "text/html")
-  (add-to-list 'mm-discouraged-alternatives "text/richtext"))
-#+end_src
-
-***** Bookmarks
-the following is to show shortcuts in the main view.
-
-#+begin_src emacs-lisp :tangle modules/my_tools/mail/config.el :lexical t
-(setq mu4e-bookmarks
-  '((:name "Unread messages"           :query "flag:unread AND NOT flag:trashed" :key 117)
-    (:name "Today's messages"          :query "date:today..now"                  :key 116)
-    (:name "Last 7 days"               :query "date:7d..now"                     :key 119
-           :hide-unread t)
-    (:name "Messages with images"      :query "mime:image/*"                     :key 112)
-    (:name "Flagged messages"          :query"flag:flagged"                      :key 102)
-    (:name "Inbox - Gmail (Primary)"   :query "maildir:/gmail1/Inbox"            :key ?g)
-    (:name "Inbox - Gmail (Secondary)" :query "maildir:/gmail2/Inbox"            :key ?g)
-    (:name "Inbox - Western"           :query "maildir:/school/Inbox"            :key ?w)))
-#+end_src
-
-***** Contexts
-#+begin_src emacs-lisp :tangle modules/my_tools/mail/config.el :lexical t
-(after! mu4e (setq mu4e-contexts
+******* Init
+:PROPERTIES:
+header-args:      :noweb-ref mu4e-init
+:END:
+#+begin_src emacs-lisp
+(setq mu4e-contexts
       (list
        (make-mu4e-context
         :name "gmail1"
@@ -2000,12 +1950,77 @@ the following is to show shortcuts in the main view.
                 (mu4e-refile-folder . "/school/Archive")
                 (mu4e-sent-folder . "/school/Sent")
                 (mu4e-trash-folder . "/school/Trash")))))
+#+end_src
+
+******* Keymaps
+:PROPERTIES:
+header-args:      :noweb-ref mu4e-keymaps
+:END:
+#+begin_src emacs-lisp
+#+end_src
+******* Config
+:PROPERTIES:
+:header-args: :noweb-ref mu4e-config
+:END:
+Some general configuration
+#+begin_src emacs-lisp
+;; For rendering html email
+(defun my-render-html-message ()
+  (let ((dom (libxml-parse-html-region (point-min) (point-max))))
+    (erase-buffer)
+    (shr-insert-document dom)
+    (goto-char (point-min))))
+
+(setq mu4e-html2text-command 'my-render-html-message)
+
+(setq
+    mu4e-mu-binary (executable-find "mu")
+    mu4e-maildir "~/.maildir"
+    mu4e-get-mail-command (concat (executable-find "mbsync") " -a")
+    mu4e-update-interval 300 ;; seconds
+    mu4e-attachment-dir "~/Desktop"
+    mu4e-change-filenames-when-moving 't
+    mu4e-split-view 'horizontal
+    mu4e-index-cleanup nil      ;; don't do a full cleanup check
+    mu4e-index-lazy-check t    ;; don't consider up-to-date dirs
+    mu4e-user-mail-address-list '("carson03henrich@gmail.com" "carson3henrich@gmail.com" "henricc5@wwu.edu")
+    mu4e-maildir-shortcuts '(("/gmail1/Inbox" . ?i)
+                             ("/gmail1/Important" . ?j)
+                             ("/gmail1/Sent" . ?s)
+                             ("/gmail1/Drafts" . ?d)
+                             ("/school/Inbox" . ?I)
+                             ("/school/Important" . ?J)
+                             ("/school/Sent" . ?S)
+                             ("/school/Drafts" . ?D)))
+
+(with-eval-after-load "mm-decode"
+  (add-to-list 'mm-discouraged-alternatives "text/html")
+  (add-to-list 'mm-discouraged-alternatives "text/richtext"))
+#+end_src
+******** Bookmarks
+the following is to show shortcuts in the main view.
+
+#+begin_src emacs-lisp
+(setq mu4e-bookmarks
+  '((:name "Unread messages"           :query "flag:unread AND NOT flag:trashed" :key 117)
+    (:name "Today's messages"          :query "date:today..now"                  :key 116)
+    (:name "Last 7 days"               :query "date:7d..now"                     :key 119
+           :hide-unread t)
+    (:name "Messages with images"      :query "mime:image/*"                     :key 112)
+    (:name "Flagged messages"          :query"flag:flagged"                      :key 102)
+    (:name "Inbox - Gmail (Primary)"   :query "maildir:/gmail1/Inbox"            :key ?g)
+    (:name "Inbox - Gmail (Secondary)" :query "maildir:/gmail2/Inbox"            :key ?g)
+    (:name "Inbox - Western"           :query "maildir:/school/Inbox"            :key ?w)))
+#+end_src
+
+******** Contexts
+#+begin_src emacs-lisp
 
 (setq mu4e-compose-context-policy 'ask)) ;; ask for context if no context matches;
 #+end_src
 
-***** Sending
-#+begin_src emacs-lisp :tangle modules/my_tools/mail/config.el :lexical t
+******** Sending
+#+begin_src emacs-lisp
 ;; gpg encryptiom & decryption:
 ;; this can be left alone
 (require 'epa-file)
@@ -2061,8 +2076,8 @@ the following is to show shortcuts in the main view.
 (add-hook 'mu4e-compose-mode-hook 'company-mode)
 #+end_src
 
-***** Options
-#+begin_src emacs-lisp :tangle modules/my_tools/mail/config.el :lexical t
+******** Options
+#+begin_src emacs-lisp
 ;; store link to message if in header view, not to header query:
 (setq org-mu4e-link-query-in-headers-mode nil)
 
@@ -2081,6 +2096,7 @@ the following is to show shortcuts in the main view.
 ;; M-x find-function RET message-citation-line-format for docs:
 (setq message-citation-line-function 'message-insert-formatted-citation-line)
 #+end_src
+
 *** TODO RSS
 #+begin_src emacs-lisp :tangle config.el
 (defun ime-elfeed-podcast-tagger (entry)
