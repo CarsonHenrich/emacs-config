@@ -247,7 +247,8 @@ doom block.
        ;;tabs                                       ; a tab bar for Emacs
 
        :editor
-       (evil +everywhere)                           ; come to the dark side, we have cookies
+       (meow +qwerty +override)
+       ;; (evil +everywhere)                           ; come to the dark side, we have cookies
        file-templates                               ; auto-snippets for empty files
        fold                                         ; (nigh) universal code folding
        format                                       ; automated prettiness
@@ -275,7 +276,7 @@ doom block.
 
        :checkers
        (spell +flyspell +hunspell)                  ; tasing you for misspelling mispelling
-       (syntax +flymake)                            ; tasing you for every semicolon you forgetjk
+       (syntax +flymake)                            ; tasing you for every semicolon you forget
        grammar                                      ; tasing grammar mistake every you make
 
        :tools
@@ -396,7 +397,9 @@ doom block.
        ;;twitter                                    ; twitter client https://twitter.com/vnought
 
        :config
-       (default +smartparens +evil +evil-bindings)
+       (default +smartparens
+                ;;   +evil-bindings +evil-bindings
+                )
        ;;literate
 
 
@@ -1827,26 +1830,6 @@ Packages included with this flag
 (package! sql-indent)
 #+end_src
 
-#+begin_src emacs-lisp :tangle keymaps.el
-(map!
- :map sql-mode-map
- :localleader
- :desc "SQL Connect to REPL"             "m" #'sql-connect
- :desc "Set SQL Product"                 "M" #'sql-set-product
- :desc "Execute Paragraph"               "p" #'lsp-sql-execute-paragraph
- :desc "Send Paragraph to REPL"          "P" #'sql-send-paragraph
- :desc "Send Buffer to REPL"             "b" #'sql-send-buffer
- :desc "Send String to REPL"             "q" #'sql-send-string
- :desc "Execute Region or Buffer"        "r" #'lsp-sql-execute-query
- :desc "Send Region to REPL"          :v "R" #'sql-send-region
- :desc "Toggle Goto After Send"          "t" #'sql-toggle-pop-to-buffer-after-send-region
- :desc "Switch Connection"               "c" #'lsp-sql-switch-connection
- :desc "Show Connections"                "C" #'lsp-sql-show-connections
- :desc "Switch Database"                 "d" #'lsp-sql-switch-database
- :desc "Show Databases"                  "D" #'lsp-sql-show-databases
- :desc "List Table"                      "l" #'sql-list-table
- :desc "List All"                        "L" #'sql-list-all)
-#+end_src
 
 #+begin_src emacs-lisp :tangle config.el
 (add-hook 'sql-mode-hook 'lsp)
@@ -1981,7 +1964,7 @@ Some general configuration
     mu4e-attachment-dir "~/Desktop"
     mu4e-change-filenames-when-moving 't
     mu4e-split-view 'horizontal
-    mu4e-index-cleanup nil      ;; don't do a full cleanup check
+    mu4e-index-cleanup nil      ;; TODO don't do a full cleanup check
     mu4e-index-lazy-check t    ;; don't consider up-to-date dirs
     mu4e-user-mail-address-list '("carson03henrich@gmail.com" "carson3henrich@gmail.com" "henricc5@wwu.edu")
     mu4e-maildir-shortcuts '(("/gmail1/Inbox" . ?i)
@@ -2355,12 +2338,19 @@ Need to set up treesitter such that it is used whenever it can be.
 #+end_src
 
 ** Keymaps
+*** Evil
+:PROPERTIES:
+:header-args: :tangle evil-keymaps.el :lexical t
+:END:
+
 #+begin_src emacs-lisp :tangle config.el
-(load! "keymaps")
+(when (modulep! :editor evil)
+  (load! "evil-keymaps"))
 #+end_src
-*** Global
-**** Help
-#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+
+**** Global
+***** Help
+#+begin_src emacs-lisp
       (map!
         (:after help :map help-mode-map
                 :n "o"       #'link-hint-open-link)
@@ -2381,8 +2371,8 @@ Need to set up treesitter such that it is used whenever it can be.
                 :n "q"    #'kill-current-buffer))
 #+end_src
 
-**** Evil
-#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+***** Evil
+#+begin_src emacs-lisp
 (when (modulep! :editor evil +everywhere)
   ;; Minibuffer
   (map! :map (evil-ex-completion-map evil-ex-search-keymap)
@@ -2416,8 +2406,8 @@ Need to set up treesitter such that it is used whenever it can be.
 
 #+end_src
 
-**** Smart Tab
-#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+***** Smart Tab
+#+begin_src emacs-lisp
 ;; Smart tab, these will only work in GUI Emacs
 (map! :i [tab] (cmds! (and (modulep! :editor snippets)
                            (yas-maybe-expand-abbrev-key-filter 'yas-expand))
@@ -2450,15 +2440,15 @@ Need to set up treesitter such that it is used whenever it can be.
                       #'evil-jump-item))
 #+end_src
 
-*** Navigation
-**** Windows
-#+begin_src emacs-lisp :tangle keymaps.el
+**** Navigation
+***** Windows
+#+begin_src emacs-lisp
 (map! :leader :prefix ("w" . "windows")
         :desc "Delete other windows" :n "o" #'delete-other-windows)
 #+end_src
 
-**** Workspaces
-#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+***** Workspaces
+#+begin_src emacs-lisp
 (map! (:when (modulep! :ui workspaces)
         :n "C-t"   #'+workspace/new
         :n "C-S-t" #'+workspace/display
@@ -2512,8 +2502,8 @@ Need to set up treesitter such that it is used whenever it can be.
             :desc "Switch to final workspace" "0"   #'+workspace/switch-to-final)))
 #+end_src
 
-**** Buffers
-#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+***** Buffers
+#+begin_src emacs-lisp
       ;;; <leader> b --- buffer
 (map! (:leader :prefix ("b" . "buffer")
        :desc "Toggle narrowing"            "-"   #'doom/toggle-narrow-buffer
@@ -2549,8 +2539,8 @@ Need to set up treesitter such that it is used whenever it can be.
            :desc "Switch buffer"              "b"   #'switch-to-buffer)))
 #+end_src
 
-**** Files
-#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+***** Files
+#+begin_src emacs-lisp
       ;;; <leader> f --- file
 (map! (:leader :prefix ("f" . "file")
     :desc "Create File"                 "c"   #'dired-create-empty-file
@@ -2575,8 +2565,8 @@ Need to set up treesitter such that it is used whenever it can be.
     :desc "Yank file path from project" "Y"   #'+default/yank-buffer-path-relative-to-project))
 #+end_src
 
-**** Projects
-#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+***** Projects
+#+begin_src emacs-lisp
       ;;; <leader> p --- project
 (map! (:leader :prefix ("p" . "project")
        :desc "Browse project"               "." #'+default/browse-project
@@ -2612,8 +2602,8 @@ Need to set up treesitter such that it is used whenever it can be.
         :desc "List project tasks"          "z" #'+taskrunner/project-tasks)))
 #+end_src
 
-*** Completion
-#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+**** Completion
+#+begin_src emacs-lisp
 (map! (:when (modulep! :completion company)
         :i "C-@"    (cmds! (not (minibufferp)) #'company-complete-common)
         :i "C-SPC"  (cmds! (not (minibufferp)) #'company-complete-common)
@@ -2694,8 +2684,8 @@ Need to set up treesitter such that it is used whenever it can be.
             [C-return] #'helm-grep-run-other-window-action)))
 #+end_src
 
-*** UI
-#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+**** UI
+#+begin_src emacs-lisp
 (map!
         ;; misc
         :n "C-S-f"  #'toggle-frame-fullscreen
@@ -2763,8 +2753,8 @@ Need to set up treesitter such that it is used whenever it can be.
             :desc "Zen mode (fullscreen)"      "Z" #'+zen/toggle-fullscreen)))
 #+end_src
 
-*** Editor
-#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+**** Editor
+#+begin_src emacs-lisp
 (map!
  (:when (modulep! :editor format)
   :n "gQ" #'+format:region
@@ -2784,8 +2774,8 @@ Need to set up treesitter such that it is used whenever it can be.
   :i  [C-tab] #'aya-expand
   :nv [C-tab] #'aya-create))
 #+end_src
-**** Multi-Cursors
-#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+***** Multi-Cursors
+#+begin_src emacs-lisp
 (map! (:when (modulep! :editor multiple-cursors)
        ;; evil-multiedit
        :v  "R"               #'evil-multiedit-match-all
@@ -2821,8 +2811,8 @@ Need to set up treesitter such that it is used whenever it can be.
         :v  "A"               #'evil-mc-make-cursor-in-visual-selection-end)))
 #+end_src
 
-*** Tools
-#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+**** Tools
+#+begin_src emacs-lisp
 ;;; <leader> l --- live share/collab
 ;;; TODO Do you like this location for this map? This was the best idea we
 ;;; could come up with, but we're happy to move it if there's a better
@@ -2848,7 +2838,26 @@ Need to set up treesitter such that it is used whenever it can be.
                                   :desc "Goto next user's cursor"        "]"   #'crdt-goto-next-user
                                   :desc "Goto previous user's cursor"    "["   #'crdt-goto-prev-user))
 
-    ;;; <leader> o --- open
+(:map sql-mode-map
+ :localleader
+ :desc "SQL Connect to REPL"             "m" #'sql-connect
+ :desc "Set SQL Product"                 "M" #'sql-set-product
+ :desc "Execute Paragraph"               "p" #'lsp-sql-execute-paragraph
+ :desc "Send Paragraph to REPL"          "P" #'sql-send-paragraph
+ :desc "Send Buffer to REPL"             "b" #'sql-send-buffer
+ :desc "Send String to REPL"             "q" #'sql-send-string
+ :desc "Execute Region or Buffer"        "r" #'lsp-sql-execute-query
+ :desc "Send Region to REPL"          :v "R" #'sql-send-region
+ :desc "Toggle Goto After Send"          "t" #'sql-toggle-pop-to-buffer-after-send-region
+ :desc "Switch Connection"               "c" #'lsp-sql-switch-connection
+ :desc "Show Connections"                "C" #'lsp-sql-show-connections
+ :desc "Switch Database"                 "d" #'lsp-sql-switch-database
+ :desc "Show Databases"                  "D" #'lsp-sql-show-databases
+ :desc "List Table"                      "l" #'sql-list-table
+ :desc "List All"                        "L" #'sql-list-all)
+
+
+   ;;; <leader> o --- open
  (:leader :prefix ("o" . "open")
   :desc "Default browser"    "b"  #'browse-url-of-file
   :desc "Start debugger"     "d"  #'+debugger/start
@@ -3020,16 +3029,17 @@ Need to set up treesitter such that it is used whenever it can be.
                :desc "Recolor"                   "R" #'pdf-view-themed-minor-mode))))
 #+end_src
 
-*** Other
-#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+**** Other
+#+begin_src emacs-lisp
 (map! :when (modulep! :tools eval) "M-r" #'+eval/buffer)
 (map! :leader
       :desc "Eval expression"       ";"    #'pp-eval-expression
       :desc "M-x"                   ":"    #'execute-extended-command
       :desc "Pop up scratch buffer" "["    #'doom/open-scratch-buffer
       ;; C-u is used by evil
+(:when (modulep! :editor evil)
       :desc "Universal argument"    "j"    #'universal-argument
-      :desc "window"                "w"    evil-window-map
+      :desc "window"                "w"    evil-window-map)
       :desc "help"                  "h"    help-map
       :desc "Find file"             "."    #'find-file
       :desc "Switch buffer"         ","    #'switch-to-buffer
@@ -3079,9 +3089,9 @@ Need to set up treesitter such that it is used whenever it can be.
 #+RESULTS:
 : doom/restart
 
-*** Programming
-**** Code
-#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+**** Programming
+***** Code
+#+begin_src emacs-lisp
     (map! (:leader :prefix ("c" . "code")
             :desc "Compile"                               "c"   #'compile
             :desc "Recompile"                             "C"   #'recompile
@@ -3135,8 +3145,8 @@ Need to set up treesitter such that it is used whenever it can be.
                     :desc "Jump to symbol in current workspace" "j"   #'consult-eglot-symbols))))
 #+end_src
 
-**** Git
-#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+***** Git
+#+begin_src emacs-lisp
       ;;; <leader> g --- git/version control
   (map! :leader :prefix ("g" . "git")
        :desc "Revert file"                 "R"   #'vc-revert
@@ -3198,15 +3208,42 @@ Need to set up treesitter such that it is used whenever it can be.
                 :desc "Issue"                     "i"   #'forge-create-issue
                 :desc "Pull request"              "p"   #'forge-create-pullreq)))
 #+end_src
-*** No Idea
-#+begin_src emacs-lisp :tangle keymaps.el :lexical t
+**** No Idea
+#+begin_src emacs-lisp
 (after! which-key
   (let ((prefix-re (regexp-opt (list doom-leader-key doom-leader-alt-key))))
     (cl-pushnew `((,(format "\\`\\(?:C-w\\|%s w\\) m\\'" prefix-re))
                   nil . "maximize")
                 which-key-replacement-alist)))
 
+,#+end_#+begin_src
+
+,#+end_#+begin_src
+
 #+end_src
+*** Meow
+:PROPERTIES:
+:header-args: :tangle meow-keymaps.el :lexical t
+:END:
+#+begin_src emacs-lisp :tangle config.el
+(when (modulep! :editor meow)
+  (load! "meow-keymaps"))
+#+end_src
+
+**** Spaces
+**** Windows
+#+begin_src emacs-lisp
+(map!
+ :leader
+ :prefix ("w" . "windows")
+      :desc "Focus Other" :n "h" #'other-window
+      :desc "Split" :n "l" #'split-window
+      :desc "Delete other windows" :n "o" #'delete-other-windows)
+#+end_src
+
+**** Projects
+**** Apps
+**** Notes
 ** Tools
 *** Magit
 #+begin_src emacs-lisp :tangle config.el
@@ -3291,4 +3328,16 @@ Consider adding this file to your list of agenda files so that events show up th
 :PROPERTIES:
 :ARCHIVE_TIME: 2024-07-17 Wed 17:43
 :END:
-
+** Editor
+*** Meow
+#+begin_src emacs-lisp :tangle config.el
+(setq meow-use-clipboard t)
+#+end_src
+* Forge Workspace
+#+begin_src emacs-lisp
+(ghub-request "GET" "/user" nil
+              :forge 'github
+              :host "api.github.com"
+              :username "CarsonHenrich"
+              :auth 'forge)
+#+end_src

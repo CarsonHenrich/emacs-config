@@ -9,3 +9,5 @@ keybinds.el
 /keymaps.el
 /custom.el
 /modules/
+/meow-keymaps.el
+/evil-keymaps.el
