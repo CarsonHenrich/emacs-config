@@ -1,7 +1,6 @@
 :PROPERTIES:
 :header-args: :comments both
 :END:
-
 #+Title: Doom Emacs Configuration
 * Introduction
 This is my [[https:github.com/doomemacs/doomemacs][Doom Emacs]] configuration it has taken heavy inspiration from multiple
@@ -247,7 +246,7 @@ doom block.
        ;;tabs                                       ; a tab bar for Emacs
 
        :editor
-       (meow +qwerty +override)
+       meow
        ;; (evil +everywhere)                           ; come to the dark side, we have cookies
        file-templates                               ; auto-snippets for empty files
        fold                                         ; (nigh) universal code folding
@@ -2079,7 +2078,7 @@ the following is to show shortcuts in the main view.
 ;; M-x find-function RET message-citation-line-format for docs:
 (setq message-citation-line-function 'message-insert-formatted-citation-line)
 #+end_src
-
+*** TODO Magit
 *** TODO RSS
 #+begin_src emacs-lisp :tangle config.el
 (defun ime-elfeed-podcast-tagger (entry)
@@ -2179,6 +2178,140 @@ If `DEVICE-NAME' is provided, it will be used instead of prompting the user."
 *** TODO Jira
 **** README
 **** Configuration
+** Editor
+*** Meow
+**** Packages
+Install packages required by this module according to other modules and flags set
+#+begin_src emacs-lisp :tangle modules/editor/meow/packages.el :noweb yes :lexical t
+(package! meow)
+#+end_src
+
+**** Configuration
+#+begin_src emacs-lisp :tangle modules/editor/meow/config.el :noweb yes :lexical t
+<<modules-editor-meow-config>>
+<<modules-editor-meow-use-packages>>
+<<modules-load_flags>>
+#+end_src
+
+***** General Config
+:PROPERTIES:
+:header-args: :noweb-ref modules-editor-meow-config
+:END:
+****** Qwerty Keymaps
+:PROPERTIES:
+header-args:      :noweb-ref meow-keymaps
+:END:
+#+begin_src emacs-lisp
+(defun meow-setup-qwerty ()
+  (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty)
+  (meow-motion-overwrite-define-key
+   '("j" . meow-next)
+   '("k" . meow-prev)
+   '("<escape>" . ignore))
+  (meow-leader-define-key
+   ;; SPC j/k will run the original command in MOTION state.
+   '("j" . "H-j")
+   '("k" . "H-k")
+   ;; Use SPC (0-9) for digit arguments.
+   '("1" . meow-digit-argument)
+   '("2" . meow-digit-argument)
+   '("3" . meow-digit-argument)
+   '("4" . meow-digit-argument)
+   '("5" . meow-digit-argument)
+   '("6" . meow-digit-argument)
+   '("7" . meow-digit-argument)
+   '("8" . meow-digit-argument)
+   '("9" . meow-digit-argument)
+   '("0" . meow-digit-argument)
+   '("/" . meow-keypad-describe-key)
+   '("?" . meow-cheatsheet))
+  (meow-normal-define-key
+   '("0" . meow-expand-0)
+   '("9" . meow-expand-9)
+   '("8" . meow-expand-8)
+   '("7" . meow-expand-7)
+   '("6" . meow-expand-6)
+   '("5" . meow-expand-5)
+   '("4" . meow-expand-4)
+   '("3" . meow-expand-3)
+   '("2" . meow-expand-2)
+   '("1" . meow-expand-1)
+   '("-" . negative-argument)
+   '(";" . meow-reverse)
+   '("," . meow-inner-of-thing)
+   '("." . meow-bounds-of-thing)
+   '("[" . meow-beginning-of-thing)
+   '("]" . meow-end-of-thing)
+   '("a" . meow-append)
+   '("A" . meow-open-below)
+   '("b" . meow-back-word)
+   '("B" . meow-back-symbol)
+   '("c" . meow-change)
+   '("d" . meow-delete)
+   '("D" . meow-backward-delete)
+   '("e" . meow-next-word)
+   '("E" . meow-next-symbol)
+   '("f" . meow-find)
+   '("g" . meow-cancel-selection)
+   '("G" . meow-grab)
+   '("h" . meow-left)
+   '("H" . meow-left-expand)
+   '("i" . meow-insert)
+   '("I" . meow-open-above)
+   '("j" . meow-next)
+   '("J" . meow-next-expand)
+   '("k" . meow-prev)
+   '("K" . meow-prev-expand)
+   '("l" . meow-right)
+   '("L" . meow-right-expand)
+   '("m" . meow-join)
+   '("n" . meow-search)
+   '("o" . meow-block)
+   '("O" . meow-to-block)
+   '("p" . meow-yank)
+   '("q" . meow-quit)
+   '("Q" . meow-goto-line)
+   '("r" . meow-replace)
+   '("R" . meow-swap-grab)
+   '("s" . meow-kill)
+   '("t" . meow-till)
+   '("u" . meow-undo)
+   '("U" . meow-undo-in-selection)
+   '("v" . meow-visit)
+   '("w" . meow-mark-word)
+   '("W" . meow-mark-symbol)
+   '("x" . meow-line)
+   '("X" . meow-goto-line)
+   '("y" . meow-save)
+   '("Y" . meow-sync-grab)
+   '("z" . meow-pop-selection)
+   '("'" . repeat)
+   '("<escape>" . ignore)))
+   #+end_src
+
+***** Use Packages
+:PROPERTIES:
+:header-args: :noweb-ref modules-editor-meow-use-packages
+:END:
+****** Meow
+#+begin_src emacs-lisp :noweb yes
+(use-package! meow
+  :hook (doom-after-modules-config . meow-global-mode)
+  :demand t
+  :config
+  <<meow-config>>)
+  #+end_src
+
+******* Config
+:PROPERTIES:
+:header-args: :noweb-ref meow-config
+:END:
+#+begin_src emacs-lisp
+(require 'meow)
+(meow-setup-qwerty)
+(meow-global-mode 1)
+#+end_src
+**** Flags
 * Temporary Fixes
 Here is a place where I can place /temporary/ fixes to bugs that have cropped up
 while using my configuration. I say that they are temporary because they are
@@ -3259,7 +3392,7 @@ Need to set up treesitter such that it is used whenever it can be.
 #+begin_src emacs-lisp :tangle yes
 (set-lookup-handlers! 'lsp-ui-doc-mode :documentation #'lsp-ui-doc-glance)
 (after! corfu
-   (setq corfu-preselect 'valid)
+   (setq corfu-preselect 'prompt)
    (add-hook 'completion-at-point-functions #'cape-file)
    (add-hook! org-mode (add-hook 'completion-at-point-functions #'cape-dict 0 't)))
 #+end_src
