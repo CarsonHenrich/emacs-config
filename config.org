@@ -1,5 +1,6 @@
 :PROPERTIES:
 :header-args: :comments both :tangle no :results silent :noweb yes
+:header-args:org: :lexical t
 :END:
 #+Title: Doom Emacs Configuration
 * Introduction
@@ -404,274 +405,25 @@ doom block.
 
        :my_lang
        (org +roam +roam-ui +noter +pretty +query +present +hugo)
-       (:if (modulep! :email mu4e)  :my_tools mail))
+       :my_tools
+       (:if (modulep! :email mu4e) mail))
 #+end_src
+** Flag Loading Block
 
-** Template
-**** Initialization
-*This section will run before all other sections*
-Used for early initialization and overwriting doom base configuration
-***** How to use
-*Files:* ~init.el~
-[[https://github.com/doomemacs/doomemacs/blob/master/docs/getting_started.org#initel][Docs]]
-
-This file is loaded early, before anything else, but after Doom core is loaded.
-It is loaded in both interactive and non-interactive sessions (it’s the only
-file, besides ~cli.el~ that is loaded when the ~bin/doom~ starts up).
-
-*Do:*
-
-- Configure Emacs or perform setup/teardown operations that must be set early;
-  before other modules are (or this module is) loaded.
-- Reconfigure packages defined in Doom modules with ~use-package-hook!~ (as a
-  last resort, when ~after!~ and hooks aren’t enough).
-- Configure behavior of ~bin/doom~ in a way that must also apply in interactive
-  sessions.
-
-*Don’t:*
-
-- Configure packages with ~use-package!~ or ~after!~ from here
-- Preform expensive or error-prone operations; these files are evaluated
-  whenever ~bin/doom~ is used; a fatal error in this file can make Doom unbootable
-  (but not irreversibly).
-- Define new bin/doom commands here. That’s what ~cli.el~ is for.
-
-****** Template
-*NOTE ALL TEMPLATE CODE BLOCKS MUST BE CHANGED FROM SAYING ~:tangl~ TO ~:tangle~ IN HEADER*
-#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/init.el :lexical t
-#+end_src
-
-**** Packages
-Install packages required by this module according to other modules and flags set
-***** How to use
-*Files:* ~packages.el~
-[[https://github.com/doomemacs/doomemacs/blob/master/docs/getting_started.org#packagesel][Docs]]
-
-This file is where package declarations belong. It’s also a good place to look
-if you want to see what packages a module manages (and where they are installed
-from).
-
-*Do:*
-- Declare packages with the ~package!~ macro
-- Disable single packages with package!’s ~:disable~ property or multiple packages
-  with the ~disable-packages!~ macro.
-- Use the ~featurep!~ macro to make packages conditional based on the state of
-  another module or the presence of a flag.
-
-*Don’t:*
-
-- Configure packages here (definitely no ~use-package!~ or ~after!~ in here!).
-  This file is read in an isolated environment and will have no lasting
-  effect. The only exception is configuration targeting ~straight.el~.
- - Perform expensive calculations. These files are read often and sometimes
-   multiple times.
- - Produce any side-effects, for the same reason.
-
- The [[https://github.com/doomemacs/doomemacs/blob/master/docs/getting_started.org#package-management][Package Management]] section goes over the ~package!~ macro and how to deal with packages.
-
-****** Template
-*NOTE ALL TEMPLATE CODE BLOCKS MUST BE CHANGED FROM SAYING ~:tangl~ TO ~:tangle~ IN HEADER*
-#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/packages.el :lexical t
-#+end_src
-
-**** Configuration
-The bulk of the modules actual configuration
-***** How to use
-*Files:* config.el
-[[https://github.com/doomemacs/doomemacs/blob/master/docs/getting_started.org#confige][Docs]]
-
-The heart of every module. Code in this file should expect dependencies (in
-~packages.el~) to be installed and available. Use it to load and configure its
-packages.
-
-*Do:*
-- Use ~after!~ or ~use-package!~ to configure packages.
-  #+begin_src emacs-lisp :tangle no
-;; from modules/completion/company/config.el
-(use-package! company  ; `use-package!' is a thin wrapper around `use-package'
-                       ; it is required that you use this in Doom's modules,
-                       ; but not required to be used in your private config.
-  :commands (company-mode global-company-mode company-complete
-             company-complete-common company-manual-begin company-grab-line)
-  :config
-  (setq company-idle-delay nil
-        company-tooltip-limit 10
-        company-dabbrev-downcase nil
-        company-dabbrev-ignore-case nil)
-[...])
-#+end_src
-- Lazy load packages with use-package’s ~:defer~ property.
-- Use the ~featurep!~ macro to make some configuration conditional based on
-  the state of another module or the presence of a flag.
-
-*Don’t:*
-- Use ~package!~
-- Install packages with ~package.el~ or use-package’s ~:ensure~ property. Doom has
-  its own package manager. That’s what ~packages.el~ is for.
-
-****** Template
-*NOTE ALL TEMPLATE CODE BLOCKS MUST BE CHANGED FROM SAYING ~:tangl~ TO ~:tangle~ IN HEADER*
-#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/config.el :lexical t
-#+end_src
-***** Definitions
-I like to separate out the definitions of variables and functions from the rest
-of the module so that it is out of the way and also because definitions tend to
-be more self-documenting.
-#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/config.el :lexical t
-#+end_src
-
-***** Keymaps
-By seperating keymaps from the rest of the configuration we keep the related
-things together and make it easy to modify related keymappings.
-#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/config.el :lexical t
-#+end_src
-
-***** General
-
-#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/config.el :lexical t
-#+end_src
-
-**** Checks
-Modules sanity checks run on ~doom doctor~
-***** How to use
-*Files:* ~doctor.el~
-[[https://github.com/doomemacs/doomemacs/blob/master/docs/getting_started.org#doctorel][Docs]]
-
-When you execute doom doctor, this file defines a series of tests for the
-module. These should perform sanity checks on the environment, such as:
-
-- Check if the module’s dependencies are satisfied,
-- Warn if any of the enabled flags are incompatible,
-- Check if the system has any issues that may interfere with the operation of
-  this module.
-
-Use the warn!, error! and explain! macros to communicate issues to the user and,
-ideally, explain how to fix them.
-
-For example, the ~:lang cc~ module’s doctor checks to see if the ~irony~ server is
-installed:
-#+begin_src emacs-lisp :tangle no
-;; from lang/cc/doctor.el
-(require 'irony)
-(unless (file-directory-p irony-server-install-prefix)
-  (warn! "Irony server isn't installed. Run M-x irony-install-server"))
-#+end_src
-****** Template
-*NOTE ALL TEMPLATE CODE BLOCKS MUST BE CHANGED FROM SAYING ~:tangl~ TO ~:tangle~ IN HEADER*
-#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/doctor.el :lexical t
-#+end_src
-**** Autoload
-For functions that shouldn't be loaded until needed
-***** How to use
-*Files:* ~autoload/*.el~ OR ~autoload.el~
-[[https://github.com/doomemacs/doomemacs/blob/master/docs/getting_started.org#autoloadel-or-autoloadel][Docs]]
-
-These files are where you’ll store functions that shouldn’t be loaded until
-they’re needed and logic that should be autoloaded (evaluated very, very early
-at startup).
-
-This is all made possible thanks to these autoload cookie: ~;;;###autoload~.
-Placing this on top of a lisp form will do one of two things:
-
-1. Add a autoload call to Doom’s autoload file (found in
-   ~~/.emacs.d/.local/autoloads.el~, which is read very early in the startup
-   process).
-2. Or copy that lisp form to Doom’s autoload file verbatim (usually the case for
-   anything other than def* forms, like ~defun~ or ~defmacro~).
-
-Doom’s autoload file is generated by scanning these files when you execute ~doom
-sync~.
-
-For example:
-#+begin_src emacs-lisp :tangle no
-;; from modules/lang/org/autoload/org.el
-;;;###autoload
-(defun +org/toggle-checkbox ()
-  (interactive)
-  [...])
-
-;; from modules/lang/org/autoload/evil.el
-;;;###autoload (autoload '+org:attach "lang/org/autoload/evil" nil t)
-(evil-define-command +org:attach (&optional uri)
-  (interactive "<a>")
-  [...])
-#+end_src
-
-****** Template
-*NOTE ALL TEMPLATE CODE BLOCKS MUST BE CHANGED FROM SAYING ~:tangl~ TO ~:tangle~ IN HEADER*
-#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/autoload/{AUTOLOAD}.el :lexical t
-#+end_src
-**** CLI
-Configure ~doom~ CLI commands
-***** How to Use
-*Files:* ~cli.el~
-[[https://github.com/doomemacs/doomemacs/blob/master/docs/getting_started.org#cliel][Docs]]
-This file is read when bin/doom starts up. Use it to define your own CLI
-commands or reconfigure existing ones.
-
-****** Template
-*NOTE ALL TEMPLATE CODE BLOCKS MUST BE CHANGED FROM SAYING ~:tangl~ TO ~:tangle~ IN HEADER*
-#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/cli.el :lexical t
-#+end_src
-
-**** Tests
-Doom Unit Tests
-***** How to use
-*Files:* ~test/**/test-*.el~
-[[https://github.com/doomemacs/doomemacs/blob/master/docs/getting_started.org#testtest-el][Docs]]
-
-Doom’s unit tests go here. More information on them to come…
-****** Template
-*NOTE ALL TEMPLATE CODE BLOCKS MUST BE CHANGED FROM SAYING ~:tangl~ TO ~:tangle~ IN HEADER*
-#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/test/{**}/test-{*}.el :lexical t
-#+end_src
-
-**** Flags
+This code block is used in all modules to load in all files in ~./flags~ for which
+the flag is enabled.
 #+name: modules-load_flags
-#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/config.el :lexical t
+#+begin_src emacs-lisp
   (dolist (flag (doom-module-context-get :flags))
     (load! (concat "flags/" (substring (symbol-name flag) 1)) nil t))
 #+end_src
-
-***** +{FLAG}
-#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/flags/{FLAG}.el :lexical t
-#+end_src
-
-**** Additional Files
-Use for whatever purpose you wish
-***** How to use
-*Files:* All Additional Files
-[[https://github.com/doomemacs/doomemacs/blob/master/docs/getting_started.org#additional-files][Docs]]
-
-Any files beyond the ones I have already named are not given special treatment.
-They must be loaded manually to be loaded at all. In this way modules can be
-organized in any way you wish. Still, there is one convention that has emerged
-in Doom’s community that you may choose to adopt: extra files in the root of the
-module are prefixed with a plus, e.g. +extra.el. There is no syntactical or
-functional significance to this convention.
-
-These can be loaded with the load! macro, which will load an elisp file relative
-to the file it’s used from. e.g.
-****** Template
-*NOTE ALL TEMPLATE CODE BLOCKS MUST BE CHANGED FROM SAYING ~:tangl~ TO ~:tangle~ IN HEADER*
-#+begin_src emacs-lisp :tangl modules/{CATEGORY}/{MODULE}/{**}/{*}.el :lexical t
-#+end_src
 ** My_Lang
 *** Org
-**** Initialization
-*This section will run before all other sections*
-Used for early initialization and overwriting doom base configuration
-***** TODO Unpin Org-roam
-- Note taken on [2024-08-01 Thu 02:04] \\
-  Unsure wether this needs to be done here or not so for now I will disable
-  tangling on this block and we shall see
-We unpin ~org-roam~ to allow ~org-roam-ui~ to work.
-#+begin_src emacs-lisp
-(when (modulep! :lang org +roam) (unpin! org-roam))
-#+end_src
 **** Packages
 Install packages required by this module according to other modules and flags set
-#+begin_src emacs-lisp :tangle modules/my_lang/org/packages.el :noweb yes :lexical t
+#+begin_src emacs-lisp :tangle modules/my_lang/org/packages.el :lexical nil
+;;; -*- no-byte-compile: t -*-
+
 (package! ob-mermaid)
 (package! engrave-faces)
 (package! org-super-agenda)
@@ -680,36 +432,30 @@ Install packages required by this module according to other modules and flags se
            :repo "tecosaur/org-pandoc-import"
            :files ("*.el" "filters" "preprocessors")))
 (when (modulep! :lang kotlin) (package! ob-kotlin))
+
+<<modules-my_lang-org-flag-packages>>
 #+end_src
 
 **** Configuration
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el :noweb yes :lexical t
-<<modules-my_lang-org-config>>
+#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el
+;;; -*- lexical-binding: t -*-
+
 <<modules-my_lang-org-use-packages>>
 <<modules-load_flags>>
 #+end_src
 
-***** General Config
-:PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-config
-:END:
-#+begin_src emacs-lisp
-
-#+end_src
 ***** Use Packages
 :PROPERTIES:
 :header-args: :noweb-ref modules-my_lang-org-use-packages
 :END:
 ****** Org
-#+name:use_org
-#+begin_src emacs-lisp :noweb yes
+#+begin_src emacs-lisp
 (use-package! org
   :init
-  (list
     <<org-keymaps>>
-    )
   :config
-  <<org-config>>)
+  <<org-config>>
+  )
 #+end_src
 ******* Config
 :PROPERTIES:
@@ -963,9 +709,11 @@ Setup the default header args for code blocks end up cluttering my notes so I se
 using ~noweb~ syntax.
 #+begin_src emacs-lisp
 (setq org-babel-default-header-args
- '((:session . "none") (:results . "output") (:exports . "code") (:cache . "no")
+ '((:session . "none") (:results . "replace output") (:exports . "code") (:cache . "no")
    (:noweb . "yes") (:hlines . "no") (:tangle . "no")))
 #+end_src
+
+#+RESULTS:
 
 ******* Keymaps
 :PROPERTIES:
@@ -1140,17 +888,13 @@ make sense for my workflow.
 #+end_src
 
 ****** Org Super Agenda
-#+name: use_org-super-agenda
-#+begin_src emacs-lisp :noweb yes
+#+begin_src emacs-lisp
 (use-package! org-super-agenda
   :after
   org
-  :init
-  (list
-    <<org-super-agenda-keymaps>>
-    )
   :config
-  <<org-super-agenda-config>>)
+  <<org-super-agenda-config>>
+  )
 #+end_src
 ******* Config
 :PROPERTIES:
@@ -1226,7 +970,7 @@ Custom commands for displaying the agenda
 #+end_src
 
 Packages included with this flag
-#+begin_src emacs-lisp :tangle modules/my_lang/org/packages.el :noweb yes :lexical t
+#+begin_src emacs-lisp :noweb-ref modules-my_lang-org-flag-packages
 (when (modulep! +pretty)
   (package! org-modern))
 #+end_src
@@ -1268,7 +1012,7 @@ Packages included with this flag
 #+end_src
 
 Packages included with this flag
-#+begin_src emacs-lisp :tangle modules/my_lang/org/packages.el :noweb yes :lexical t
+#+begin_src emacs-lisp :noweb-ref modules-my_lang-org-flag-packages
 (when (modulep! +noter)
   (package! org-noter))
 #+end_src
@@ -1348,7 +1092,7 @@ Packages included with this flag
 #+end_src
 
 Packages included with this flag
-#+begin_src emacs-lisp :tangle modules/my_lang/org/packages.el :noweb yes :lexical t
+#+begin_src emacs-lisp :noweb-ref modules-my_lang-org-flag-packages
 (when (modulep! +roam)
   (package! org-roam))
   #+end_src
@@ -1454,7 +1198,7 @@ Packages included with this flag
 #+end_src
 
 Packages included with this flag
-#+begin_src emacs-lisp :tangle modules/my_lang/org/packages.el :noweb yes :lexical t
+#+begin_src emacs-lisp :noweb-ref modules-my_lang-org-flag-packages
 (when (modulep! +roam-ui)
   (package! org-roam-ui)
   (unpin! org-roam))
@@ -1517,7 +1261,7 @@ Packages included with this flag
 #+end_src
 
 Packages included with this flag
-#+begin_src emacs-lisp :tangle modules/my_lang/org/packages.el :noweb yes :lexical t
+#+begin_src emacs-lisp :noweb-ref modules-my_lang-org-flag-packages
 (when (modulep! +query)
   (package! org-ql)
   (when (modulep! +roam)
@@ -1538,11 +1282,8 @@ Packages included with this flag
 (use-package! org-ql
   :defer t
   :init
-  (list
     <<org-ql-keymaps>>
     )
-  :config
-  <<org-ql-config>>)
 #+end_src
 ******** Config
 :PROPERTIES:
@@ -1567,16 +1308,9 @@ Packages included with this flag
 (use-package! org-roam-ql
   :defer t
   :init
-  (list
     <<org-roam-ql-keymaps>>
     )
-  :config
-  <<org-roam-ql-config>>)
 #+end_src
-******** Config
-:PROPERTIES:
-:header-args: :noweb-ref org-roam-ql-config
-:END:
 ******** Keymaps
 :PROPERTIES:
 :header-args: :noweb-ref org-roam-ql-keymaps
@@ -1595,22 +1329,8 @@ Packages included with this flag
 ******* Org-roam-ql-ql
 #+begin_src emacs-lisp
 (use-package! org-roam-ql-ql
-  :defer t
-  :init
-  (list
-    <<org-roam-ql-ql-keymaps>>
-    )
-  :config
-  <<org-roam-ql-ql-config>>)
+  :defer t)
 #+end_src
-******** Config
-:PROPERTIES:
-:header-args: :noweb-ref org-roam-ql-ql-config
-:END:
-******** Keymaps
-:PROPERTIES:
-:header-args: :noweb-ref org-roam-ql-ql-keymaps
-:END:
 
 ***** +present
 ~use-package!~ from in the [[Use Packages]] section and other general flag [[Config]]
@@ -1621,7 +1341,7 @@ Packages included with this flag
 #+end_src
 
 Packages included with this flag
-#+begin_src emacs-lisp :tangle modules/my_lang/org/packages.el :noweb yes :lexical t
+#+begin_src emacs-lisp :noweb-ref modules-my_lang-org-flag-packages
 (when (modulep! +present)
   (package! org-present))
   #+end_src
@@ -1760,10 +1480,10 @@ Packages included with this flag
 #+end_src
 
 Packages included with this flag
-#+begin_src emacs-lisp :tangle modules/my_lang/org/packages.el :noweb yes :lexical t
+#+begin_src emacs-lisp :noweb-ref modules-my_lang-org-flag-packages
 (when (modulep! +hugo)
   (package! ox-hugo))
-  #+end_src
+#+end_src
 
 ****** Config
 :PROPERTIES:
@@ -2174,6 +1894,7 @@ If `DEVICE-NAME' is provided, it will be used instead of prompting the user."
               ("C-TAB" . 'copilot-accept-completion-by-word)
               ("C-<tab>" . 'copilot-accept-completion-by-word)))
 #+end_src
+
 *** TODO Jira
 **** README
 **** Configuration
@@ -3460,16 +3181,3 @@ Consider adding this file to your list of agenda files so that events show up th
 :PROPERTIES:
 :ARCHIVE_TIME: 2024-07-17 Wed 17:43
 :END:
-** Editor
-*** Meow
-#+begin_src emacs-lisp :tangle config.el
-(setq meow-use-clipboard t)
-#+end_src
-* Forge Workspace
-#+begin_src emacs-lisp
-(ghub-request "GET" "/user" nil
-              :forge 'github
-              :host "api.github.com"
-              :username "CarsonHenrich"
-              :auth 'forge)
-#+end_src
