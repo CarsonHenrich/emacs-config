@@ -1,5 +1,5 @@
 :PROPERTIES:
-:header-args: :comments both
+:header-args: :comments both :tangle no :results silent :noweb yes
 :END:
 #+Title: Doom Emacs Configuration
 * Introduction
@@ -959,12 +959,11 @@ Save all org buffers when entering or leaving the agenda
 #+end_src
 
 ******** Babel
-Setup the default header args for code blocks I prefer that ~RESULT~ blocks don't
-end up cluttering my notes so I set that to silent and then by default allow for
+Setup the default header args for code blocks end up cluttering my notes so I set that to silent and then by default allow for
 using ~noweb~ syntax.
 #+begin_src emacs-lisp
 (setq org-babel-default-header-args
- '((:session . "none") (:results . "silent") (:exports . "code") (:cache . "no")
+ '((:session . "none") (:results . "output") (:exports . "code") (:cache . "no")
    (:noweb . "yes") (:hlines . "no") (:tangle . "no")))
 #+end_src
 
