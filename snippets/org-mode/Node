@@ -1,0 +1,11 @@
+# -*- mode: snippet -*-
+# name: Node
+# key: <N
+# --
+* [#`(string org-default-priority)`] ${1:Heading}
+:PROPERTIES:
+:CREATED: `(org-format-time-string "[%Y-%m-%d %a %H:%M]")`
+:STYLE: ${2:note$(downcase yas-text)}
+:ID: `(org-id-new)`
+:END:
+$0

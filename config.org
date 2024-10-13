@@ -408,15 +408,6 @@ doom block.
        :my_tools
        (:if (modulep! :email mu4e) mail))
 #+end_src
-** Flag Loading Block
-
-This code block is used in all modules to load in all files in ~./flags~ for which
-the flag is enabled.
-#+name: modules-load_flags
-#+begin_src emacs-lisp
-  (dolist (flag (doom-module-context-get :flags))
-    (load! (concat "flags/" (substring (symbol-name flag) 1)) nil t))
-#+end_src
 ** My_Lang
 *** Org
 **** Packages
@@ -433,82 +424,219 @@ Install packages required by this module according to other modules and flags se
            :files ("*.el" "filters" "preprocessors")))
 (when (modulep! :lang kotlin) (package! ob-kotlin))
 
-<<modules-my_lang-org-flag-packages>>
+
+(when (modulep! +noter) (package! org-noter))
+(when (modulep! +pretty) (package! org-modern))
+(when (modulep! +roam) (package! org-roam))
+(when (modulep! +present) (package! org-present))
+(when (modulep! +hugo) (package! ox-hugo))
+(when (modulep! +query)
+  (package! org-ql)
+  (when (modulep! +roam)
+    (package! org-roam-ql)
+    (package! org-roam-ql-ql)))
+(when (modulep! +roam-ui)
+  (package! org-roam-ui)
+  (unpin! org-roam))
+#+end_src
+
+**** Checks
+:PROPERTIES:
+:header-args:emacs-lisp: :tangle modules/my_lang/org/doctor.el
+:END:
+#+begin_src emacs-lisp 
+(when (and (modulep! +noter) (not (modulep! :lang org +noter))
+  (warn! "The :my_lang org +noter flag is intended to be used with :lang org +noter, not doing so is undefined behavior")
+#+end_src
+#+begin_src emacs-lisp 
+(when (and (modulep! +roam-ui) (not (modulep! +roam))
+  (error! "You are using the roam-ui flag without the roam flag, this is undefined behavior")
 #+end_src
 
 **** Configuration
-#+begin_src emacs-lisp :tangle modules/my_lang/org/config.el
-;;; -*- lexical-binding: t -*-
-
-<<modules-my_lang-org-use-packages>>
-<<modules-load_flags>>
-#+end_src
-
-***** Use Packages
 :PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-use-packages
+:header-args:emacs-lisp: :tangle modules/my_lang/org/config.el
 :END:
-****** Org
+#+begin_src emacs-lisp 
+;;; -*- lexical-binding: t -*-
+#+end_src
+***** Org
 #+begin_src emacs-lisp
 (use-package! org
+  :defer t
   :init
-    <<org-keymaps>>
+  (setq org-directory (file-truename "~/org/"))
+  (defvar ch/clock-map (make-sparse-keymap))
+  (defvar ch/notes-map (make-sparse-keymap))
+  (defvar ch/org-babel-map (make-sparse-keymap))
+  (defvar ch/org-insert-map (make-sparse-keymap))
+  :bind*
+  (:map ch/org-insert-map
+        ("x"     . org-dynamic-block-insert-dblock)
+        ("d"     . org-insert-drawer)
+        ("@"     . org-cite-insert)
+        ("<"     . org-insert-structure-template)
+        ("|"     . org-table-create-or-convert-from-region)
+        ("l"     . org-insert-link)
+        ("M-l"   . org-insert-last-stored-link)
+        ("C-M-l" . org-insert-all-links)
+        )
+  (:map ch/clock-map
+        ;; Timeclock
+        ("e"   . org-clock-modify-effort-estimate)
+        ("d"   . org-clock-display)
+        ("j"   . org-clock-goto)
+        ("C"   . org-clock-cancel)
+        ("l"   . org-clock-in-last)
+        ("i"   . org-clock-in)
+        ("o"   . org-clock-out)
+        ("r"   . org-resolve-clocks)
+        ;; Timer
+        ("-"    . org-timer-item)
+        ("."    . org-timer)
+        (","    . org-timer-pause-or-continue)
+        (";"    . org-timer-set-timer)
+        ("s"    . org-timer-start)
+        ("S"    . org-timer-stop)
+        )
+  (:map ch/sexp-map
+        ("o" . org-emphasize))
+  (:map org-mode-map
+        ("C-c C-,"       . nil)
+        ("C-c ,"         . org-priority)
+        ("C-c ^"         . org-sort)
+        ("C-c $"         . org-archive-subtree)
+        ("C-c :"         . org-toggle-fixed-width)
+        ("C-c ;"         . org-toggle-comment)
+        ("C-c C-t"       . org-todo)
+        ("C-c C-t"       . org-todo)
+        ("C-c C-q"       . org-set-tags-command)
+        ("C-c C-w"       . org-refile)
+        ("C-c C-h"       . org-set-property)
+        ("C-c C-M-w"     . org-refile-reverse)
+        ("C-c C-z"       . org-add-note)
+        ("C-c C-a"       . org-attach)
+        ("C-c C-e"       . org-export-dispatch)
+        ("C-c C-s"       . org-schedule)
+        ("C-c C-d"       . org-deadline)
+        ("C-c ."         . org-time-stamp)
+        ("C-c M-."       . org-time-stamp-inactive)
+        ("C-c C-x C-s"   . org-archive-subtree)
+        ("C-c C-x C-a"   . org-archive-subtree-default)
+        ("C-c C-x C-e"   . org-set-effort)
+        ("C-c C-x C-S-e" . org-encrypt-entry)
+        ("C-c C-x C-S-d" . org-decrypt-entry)
+        ("C-c C-x C-f"   . org-emphasize)
+        ("C-c C-x C-b"   . org-toggle-checkbox)
+        ("C-c C-x C-r"   . org-toggle-radio-button)
+        ("C-c C-x C-e"   . org-todo)
+        ("C-c C-x o"     . org-toggle-ordered-property)
+        ("C-c C-x a"     . org-toggle-archive-tag)
+        ("C-c C-x A"     . org-archive-to-archive-sibling)
+        ("C-c C-x p"     . org-set-property)
+        ("C-c C-x P"     . org-set-property-and-value)
+        ("C-c C-x b"     . org-tree-to-indirect-buffer)
+        ;; Heading Navigation
+        ("C-c C-b"       . org-backward-heading-same-level)
+        ("C-c C-f"       . org-forward-heading-same-level)
+        ("C-c C-n"       . org-next-visible-heading)
+        ("C-c C-p"       . org-previous-visible-heading)
+        ("C-c C-P"       . org-up-element)
+        ("C-c C-N"       . org-down-element)
+        ;; Link Navigation
+        ("C-c C-x C-n"   . org-next-link)
+        ("C-c C-x C-p"   . org-previous-link)
+        ;; Block Navigation
+        ("C-c M-p"       . org-previous-block)
+        ("C-c M-n"       . org-next-block))
+  (:repeat-map org-mode-block-repeat-map
+               ("p"     . org-previous-block)
+               ("n"     . org-next-block))
+  (:repeat-map org-mode-link-repeat-map
+               ("n" . org-next-link)
+               ("p" . org-previous-link))
+  (:repeat-map org-mode-heading-repeat-map
+               ("TAB"       . org-fold-show-children)
+               ("S-TAB"     . org-shifttab)
+               ("<backtab>" . org-shifttab)
+               ("b"         . org-backward-heading-same-level)
+               ("f"         . org-forward-heading-same-level)
+               ("n"         . org-next-visible-heading)
+               ("p"         . org-previous-visible-heading)
+               ("P"         . org-up-element)
+               ("N"         . org-down-element)
+               )
+  :custom
+  (org-archive-location "./archive/%s_archive::")
+  (org-return-follows-link t)
+  (org-insert-heading-respect-content nil)
+  (org-catch-invisible-edits 'show-and-error)
+  (org-src-preserve-indentation t)
+  ;; Appearance things
+  (org-auto-align-tags t)
+  (org-tags-column 0)
+  (org-ellipsis "…")
+  (org-cycle-inline-images-display t)
+  (org-startup-with-latex-preview nil)
+  (org-startup-with-inline-images nil)
+  (org-startup-indented t)
+  (org-startup-folded t)
+  (org-hide-emphasis-markers t)
+  (org-pretty-entities t)
+  (org-pretty-entities-include-sub-superscripts nil)
+  ;; ID settings
+  (org-id-method 'ts)
+  :init
+  (keymap-set mode-specific-map "n" ch/notes-map)
+  (keymap-set ch/notes-map "c" ch/clock-map)
   :config
-  <<org-config>>
-  )
-#+end_src
-******* Config
-:PROPERTIES:
-:header-args:      :noweb-ref org-config
-:END:
-Some general org mode configuration
-#+begin_src emacs-lisp
-(setq
- org-directory (file-truename "~/org/")
- org-insert-heading-respect-content 't
- org-catch-invisible-edits 'show-and-error
- org-crypt-tag-matcher "CRYPT"
- org-attach-auto-tag nil)
+  (keymap-set org-mode-map "C-c C-S-i" ch/org-insert-map)
+  (keymap-set org-mode-map "C-c C-v" ch/org-babel-map)
+  ;; Setting up blocks to match the background
+  (set-face-background 'org-block (face-background 'default))
+  (set-face-background 'org-block-begin-line (face-background 'default))
+  (set-face-background 'org-block-end-line (face-background 'default)) 
+  (defvar org-agenda-directory (expand-file-name "agenda/" org-directory)
+    "The Primary Directory in which to place agenda files")
 
-(defvar org-agenda-directory (expand-file-name "agenda/" org-directory)
-  "The Primary Directory in which to place agenda files")
+(setq org-todo-keyword-faces
+      '(("[-]" . +org-todo-active) ("NEXT" . +org-todo-active)
+        ("[?]" . +org-todo-onhold) ("HOLD" . +org-todo-onhold)
+        ("KILL" . +org-todo-cancel))
+      org-refile-use-outline-path 'file
+      org-outline-path-complete-in-steps nil
+      org-refile-targets
+     '((nil . (:maxlevel . 3))
+       (org-agenda-files . (:maxlevel . 3)))
+      org-todo-keywords '((sequence "TODO(t)" "NEXT(n!/!)" "HOLD(h!/!)" "|" "DONE(d!)" "KILL(k!)")
+                          (sequence "DRAFT(D)" "PENDING REVIEW(P!/!)" "|" "REVIEWED(R!/!)"))
+      org-crypt-tag-matcher "CRYPT"
+      ;; Change the priorities to numbers
+      org-priority-highest ?A
+      org-priority-default ?C
+      org-priority-lowest  ?E
+      ;; ascii values for 1-5
+      org-priority-faces '((?A . error) (?B . warning) (?C . success) (?D . (:foreground "white" :weight "bold")) (?E . shadow))
+      ;; Log for everything and log it into a drawer
+      org-log-refile 'time
+      org-log-done 'time
+      org-log-reschedule 'time
+      org-log-redeadline 'time
+      org-log-done-with-time t
+      org-log-note-clock-out nil
+      org-log-into-drawer t
+      org-agenda-files (directory-files-recursively org-agenda-directory "\\.org$")
+      org-agenda-window-setup 'current-window
+      org-agenda-skip-unavailable-files t
+      org-agenda-inhibit-startup t)
 
-(defvar org-weekly-directory (expand-file-name "weekly/" org-agenda-directory)
-  "The Directory in which to place weekly agenda files")
-#+end_src
-
-Set some configuration for archiving org headings
-#+begin_src emacs-lisp
-(setq
- org-archive-mark-done 'nil
- org-archive-subtree-add-inherited-tags 't
- org-archive-location "./archive/%s.archive::")
-#+end_src
-
-Have emails that I create tasks out of go into ~email.org~
-#+begin_src emacs-lisp
-(when (modulep! :my_tools mail)
-  (setq +org-capture-emails-file (expand-file-name  "email.org" org-agenda-directory)))
-#+end_src
-
-******** Appearance
-Org styling, hide markup etc.
-#+begin_src emacs-lisp
-(setq
- org-auto-align-tags t
- org-tags-column 0
- org-ellipsis "…"
- org-cycle-inline-images-display 't
- org-startup-with-latex-preview 't
- org-startup-folded 't
- org-hide-emphasis-markers t
- org-pretty-entities t)
-#+end_src
-
-Setup configuration for exporting highlighted code blocks
-#+begin_src emacs-lisp
-(setq org-latex-src-block-backend 'engraved
-      org-latex-engraved-theme    't)
+(keymap-set mode-specific-map "\\" #'org-agenda)
+(add-to-list 'org-modules 'org-habit)
+(setq org-habit-show-habits-only-for-today t)
+(add-hook 'org-clock-in-hook #'org-save-all-org-buffers)
+(add-hook 'org-clock-out-hook #'org-save-all-org-buffers)
+(add-hook 'org-after-refile-insert-hook #'save-buffer)
+  (add-hook #'auto-save-hook #'org-save-all-org-buffers))
 #+end_src
 
 Enable word count in modes listed in ~doom-modeline-continuous-word-count-modes~
@@ -537,1012 +665,409 @@ Make sure certain org faces use the fixed-pitch face when ~variable-pitch-mode~ 
 (when (display-graphic-p)
   (require 'all-the-icons))
 #+end_src
-******** Clock and Logging
-Convenience function for selecting a clock to jump to
-#+begin_src emacs-lisp
-(defun my/org-clock-jumplist ()
-  "Opens a buffer for you to decide which clock to go to"
-  (interactive)
-  (org-clock-goto 'select))
-#+end_src
-
-Save org buffers on auto save and on clocking in/out, this is mostly for syncing
-purposes as without it I frequently forget to save buffers while taking notes.
-#+begin_src emacs-lisp
-(add-hook! #'auto-save-hook #'org-save-all-org-buffers)
-(add-hook! #'org-clock-in-hook #'org-save-all-org-buffers)
-(add-hook! #'org-clock-out-hook #'org-save-all-org-buffers)
- #+end_src
-
-Setting up logging for org-mode tasks so that the time and change is logged for
-refiles, reschedules, and done states.
-#+begin_src emacs-lisp
-(setq
- org-log-refile 'time
- org-log-done 'time
- org-log-reschedule 'time
- org-log-redeadline 'time
- org-log-done-with-time 't
- org-log-note-clock-out 'nil
- org-log-into-drawer 't)
-#+end_src
-
-Also log state changes for other keywords, speaking of which we are also
-defining the keywords and the faces that should be used for them.
-#+begin_src emacs-lisp
-(require 'org-faces)
-(setq
- org-todo-keywords
- '((sequence "TODO(t)" "NEXT(n!/!)" "HOLD(h!/!)" "|" "DONE(d!)" "KILL(k!)"))
- org-todo-keyword-faces
- '(("[-]" . +org-todo-active) ("NEXT" . +org-todo-active)
-   ("[?]" . +org-todo-onhold) ("HOLD" . +org-todo-onhold)
-   ("KILL" . +org-todo-cancel)))
-#+end_src
 
 When using ~org-pomodoro~ I prefer to take my breaks manually rather than simply
 having the timer start, to give me a chance to finish things up.
 #+begin_src emacs-lisp
 (when (modulep! :lang org +pomodoro) (setq org-pomodoro-manual-break 't))
 #+end_src
+****** Agenda
+This is where configuration of general more task management and quick note
+taking things takes place.
+  
+#+begin_src emacs-lisp :tangle no :noweb-ref org-agenda
+(defvar org-agenda-directory (expand-file-name "agenda/" org-directory)
+    "The Primary Directory in which to place agenda files")
 
-******** Agenda and Capture
-Set some general configuration for the org agenda
-#+begin_src emacs-lisp
-(setq
- org-agenda-tags-column 0
- org-agenda-span 1
- org-deadline-warning-days 5
- org-agenda-block-separator ?─
- org-agenda-time-grid
- '((daily today require-timed)
-   (800 1000 1200 1400 1600 1800 2000)
-   " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
- org-agenda-current-time-string "◀── now ─────────────────────────────────────────────────"
- org-agenda-inhibit-startup 'nil
- org-agenda-start-day 'nil)
-#+end_src
+(setq org-todo-keyword-faces
+      '(("[-]" . +org-todo-active) ("NEXT" . +org-todo-active)
+        ("[?]" . +org-todo-onhold) ("HOLD" . +org-todo-onhold)
+        ("KILL" . +org-todo-cancel))
+      org-refile-use-outline-path 'file
+      org-outline-path-complete-in-steps nil
+      org-refile-targets
+     '((nil . (:maxlevel . 3))
+       (org-agenda-files . (:maxlevel . 3)))
+      org-todo-keywords '((sequence "TODO(t)" "NEXT(n!/!)" "HOLD(h!/!)" "|" "DONE(d!)" "KILL(k!)")
+                          (sequence "DRAFT(D)" "PENDING REVIEW(P!/!)" "|" "REVIEWED(R!/!)"))
+      org-crypt-tag-matcher "CRYPT"
+      ;; Change the priorities to numbers
+      org-priority-highest ?A
+      org-priority-default ?C
+      org-priority-lowest  ?E
+      ;; ascii values for 1-5
+      org-priority-faces '((?A . error) (?B . warning) (?C . success) (?D . (:foreground "white" :weight "bold")) (?E . shadow))
+      ;; Log for everything and log it into a drawer
+      org-log-refile 'time
+      org-log-done 'time
+      org-log-reschedule 'time
+      org-log-redeadline 'time
+      org-log-done-with-time t
+      org-log-note-clock-out nil
+      org-log-into-drawer t
+      org-agenda-files (directory-files-recursively org-agenda-directory "\\.org$")
+      org-agenda-window-setup 'current-window
+      org-agenda-skip-unavailable-files t
+      org-agenda-inhibit-startup t)
 
-Add in ~org-habit~ and only show todays habits in the agenda
-#+begin_src emacs-lisp
+(keymap-set mode-specific-map "\\" #'org-agenda)
 (add-to-list 'org-modules 'org-habit)
 (setq org-habit-show-habits-only-for-today t)
+(add-hook 'org-clock-in-hook #'org-save-all-org-buffers)
+(add-hook 'org-clock-out-hook #'org-save-all-org-buffers)
+(add-hook 'org-after-refile-insert-hook #'save-buffer)
 #+end_src
 
-Set all files contained in ~org-agenda-directory~ as part of the org-agenda
+****** Capture
 #+begin_src emacs-lisp
-(setq org-agenda-files (directory-files-recursively org-agenda-directory "\\.org$"))
-#+end_src
-
-Various functions for working with captures and timestamps
-#+begin_src emacs-lisp
-(defun my/org-time-stamp-inactive-with-time ()
-  "Create an inactive timestamp with a time specifier"
-  (interactive)
-  (org-time-stamp-inactive 't))
-
-(defun my/org-time-stamp-with-time ()
-  "Create an active timestamp with a time specifier"
-  (interactive)
-  (org-time-stamp 't))
-
-(defun my/org-update-reviewed ()
-  "Create or update the `REVIEWED' property of the heading at point"
-  (interactive)
-  (org-set-property "REVIEWED" (format-time-string "%Y-%m-%d %H:%M:%S")))
-
-(defun my/org-capture-add-created ()
-  "Create or update the `CREATED' property of the heading at point"
-  (interactive)
-  (org-set-property "CREATED" (org-timestamp-translate (org-timestamp-from-time (current-time) 't 't))))
-
-(defun my/org-capture-goto-project-notes-file ()
-  "Goto the notes file for the current project"
-  (interactive)
-  (find-file (+org-capture-project-notes-file)))
-
-(defun my/org-capture-week-file ()
-  "Return the filename of the current capture week file creating it if it doesn't exist"
-  (let ((filename
-         (expand-file-name (format-time-string "%Y-W%W.org") org-weekly-directory)))
-    (unless (f-exists? filename) (f-touch filename))
-    filename))
-
-(defun my/org-capture-goto-week-file ()
-  "Goto the week file for the current week"
-  (interactive)
-  (find-file (my/org-capture-week-file)))
-
-(defun my/org-capture-work-file ()
-  "The file in which to place work related notes and tasks"
-  (expand-file-name "work.org" org-agenda-directory))
-#+end_src
-
-Templates for ~org-mode~ captures for quick note taking
-#+begin_src emacs-lisp
-(setq org-capture-templates
-      '(("x" "Quick"
-         entry (file my/org-capture-week-file)
-         "* %i%? \n"
-         :prepend 't
-         :prepare-finalize my/org-capture-add-created)
-        ("w" "Work"
-         entry (file my/org-capture-work-file)
-         "* %i%? :Work:\n"
-         :prepend 't
-         :prepare-finalize my/org-capture-add-created)
-        ("r" "Review"
-         entry (file my/org-capture-week-file)
-         "* TODO Review %a%? :INBOX:Review:\n"
-         :prepend 't
-         :prepare-finalize my/org-capture-add-created
-         :immediate-finish 't)
-        ("c" "Clock-In New Task"
-         entry (file my/org-capture-week-file)
-         "* TODO %i%? \n"
-         :prepend 't
-         :prepare-finalize my/org-capture-add-created
-         :clock-keep t
-         :clock-in t)
-        ("p" "Project-local")
-        ("pt" "Project-local Todo"
-         entry (file +org-capture-project-notes-file)
-         "* TODO %? :INBOX:\n%i\n%a"
-         :unnarrowed t)
-        ("pn" "Project-local Notes"
-         entry (file +org-capture-project-notes-file)
-         "* %? :Notes:INBOX:\n%i\n%a"
-         :unnarrowed t)
-        ("pc" "Project-local Changelog"
-         entry (file+olp +org-capture-project-notes-file)
-         "* %? :Changelog:Unreleased:INBOX:\n%i\n%a"
-         :unnarrowed t)))
-#+end_src
-
-Save all org buffers when entering or leaving the agenda
-#+begin_src emacs-lisp
-(add-hook! 'evil-org-agenda-mode-hook #'org-save-all-org-buffers)
-#+end_src
-
-******** Babel
-Setup the default header args for code blocks end up cluttering my notes so I set that to silent and then by default allow for
-using ~noweb~ syntax.
-#+begin_src emacs-lisp
-(setq org-babel-default-header-args
- '((:session . "none") (:results . "replace output") (:exports . "code") (:cache . "no")
-   (:noweb . "yes") (:hlines . "no") (:tangle . "no")))
-#+end_src
-
-#+RESULTS:
-
-******* Keymaps
-:PROPERTIES:
-:header-args:      :noweb-ref org-keymaps
-:END:
-Make switching between visible heading a bit easier
-#+begin_src emacs-lisp
-(map!
- :map org-mode-map
- :desc "Move to Next Visible Heading"      :n "] h" #'org-next-visible-heading
- :desc "Move to Previous Visible Heading"  :n "[ h" #'org-previous-visible-heading)
-#+end_src
-
-Fix issue with snippets in org-mode
-#+begin_src emacs-lisp
-(map! :after evil-org
-      :map evil-org-mode-map
-      :i "C-n" #'yas-next-field
-      :i "C-p" #'yas-prev-field)
-#+end_src
-I need to override what this is set to by doom emacs because it simply doesn't
-make sense for my workflow.
-#+begin_src emacs-lisp
-(map!
- :after org
- :map org-mode-map
- :localleader
- :n "n" 'nil
- :desc "Add Note"                       :n "n" #'org-add-note)
-
-(map!
- :map org-mode-map
- :localleader
- :desc "Update Reviewed"                :n "R" #'my/org-update-reviewed
- :desc "Add Created"                    :n "C" #'my/org-capture-add-created
- :desc "Decrypt"                        :n "D" #'org-decrypt-entry
- :desc "Encrypt"                        :n "E" #'org-encrypt-entry
- :desc "Remove Result"                  :n "u" #'org-babel-remove-result
- :desc "Remove Result Blocks"           :n "U" #'+org/remove-result-blocks
- :desc "Org export to clipboard"        :n "y" #'+org/export-to-clipboard
- :desc "Org export to clipboard as RTF" :n "Y" #'+org/export-to-clipboard-as-rich-text)
-#+end_src
-
-#+begin_src emacs-lisp
-(map!
- :map org-mode-map
- :localleader
- :prefix ("c" . "clock")
- :n "d" 'nil      ;; What these are mapped to by doom make no sense for my use-case
- :n "G" 'nil
- :desc "Clock Range Prev Day"          :n "-" #'org-clock-timestamps-up
- :desc "Clock Range Next Day"          :n "=" #'org-clock-timestamps-down
- :desc "Eval Time Range"               :n "t" #'org-evaluate-time-range
- :desc "Clock In"                      :n "i" #'org-clock-in
- :desc "Clock In"                      :n "i" #'org-clock-in
- :desc "Clock Out"                     :n "o" #'org-clock-out
- :desc "Clock In Last"                 :n "I" #'org-clock-in-last
- :desc "Modify Effort"                 :n "e" #'org-clock-modify-effort-estimate
- :desc "Set Effort"                    :n "E" #'org-set-effort
- :desc "Toggle last clock"             :n "l" #'+org/toggle-last-clock
- :desc "Resolve Timeclocks"            :n "r" #'org-resolve-clocks
- :desc "Time Report"                   :n "R" #'org-clock-report
- :desc "Goto Clock"                    :n "g" #'org-clock-goto
- :desc "Clock Jumplist"                :n "c" #'my/org-clock-jumplist
- :desc "Cancel Clock"                  :n "C" #'org-clock-cancel)
-#+end_src
-
-#+begin_src emacs-lisp
-(map!
- :map org-mode-map
- :localleader
- :prefix ("l" . "links")
- :desc "Insert roam link"                  :n "r" #'org-roam-node-insert)
-#+end_src
-
-#+begin_src emacs-lisp
-(map!
- :map org-mode-map
- :localleader
- :prefix  ("d" . "date")
- :desc "Deadline"                       :n "d" #'org-deadline
- :desc "Schedule"                       :n "s" #'org-schedule
- :desc "Active Timestamp"               :n "t" #'org-time-stamp
- :desc "Active Timestamp with Time"     :n "T" #'my/org-time-stamp-with-time
- :desc "Inactive Timestamp"             :n "i" #'org-time-stamp-inactive
- :desc "Inactive Timestamp with Time"   :n "I" #'my/org-time-stamp-inactive-with-time)
-#+end_src
-
-#+begin_src emacs-lisp
-(map!
- :map org-mode-map
- :localleader
- :prefix  ("s" . "subtree")
- :desc "Archive Subtree to Sibling"   :n "z" #'org-archive-to-archive-sibling)
-#+end_src
-
-#+begin_src emacs-lisp
-(map!
- :map org-mode-map
- :localleader
- :prefix ("p" . "priority")
- :desc "Priority Up"          :n "k" #'org-priority-up
- :desc "Priority Down"        :n "j" #'org-priority-down
- :desc "Set Priority"         :n "p" #'org-priority)
-#+end_src
-
-******** Global Org Mappings
-#+begin_src emacs-lisp
-(map!
- :leader
- :desc "Capture"             "x"   #'org-capture)
-#+end_src
-#+begin_src emacs-lisp
-(map!
- :leader "n" 'nil ; Clear the equivalent mapping defined by doom
- :prefix ("n" . "notes")
- :desc "Find file in notes"           "f" #'+default/find-in-notes
- :desc "Browse notes"                 "F" #'+default/browse-notes
- :desc "Tags search"                  "m" #'org-tags-view
- :desc "Org capture"                  "n" #'org-capture
- :desc "Store Link"                  "l" #'org-store-link
- :desc "Goto capture"                 "N" #'org-capture-goto-target
- :desc "Active org-clock"             "o" #'org-clock-goto
- :desc "Todo list"                    "T" #'org-todo-list
- :desc "Search notes"                 "s" #'+default/org-notes-search
- :desc "Search org agenda headlines"  "S" #'+default/org-notes-headlines
- :desc "View search"                  "v" #'org-search-view
- :desc "Search notes for symbol"      "*" #'+default/search-notes-for-symbol-at-point
- :desc "Org agenda"                   "a" #'org-agenda
- :desc "Toggle last org-clock"        "C" #'+org/toggle-last-clock
- (:when (modulep! :tools biblio)
-   :desc "Bibliographic notes"        "b"
-   (cond ((modulep! :completion vertico)  #'citar-open-notes)
-         ((modulep! :completion ivy)      #'ivy-bibtex)
-         ((modulep! :completion helm)     #'helm-bibtex))))
-#+end_src
-#+begin_src emacs-lisp
-(map!
- :leader
- :prefix ("n" . "notes")
- (:prefix ("g". "goto")
-  :desc "Last Refile"                :n "r" #'org-refile-goto-last-stored
-  :desc "Last Capture"               :n "x" #'org-capture-goto-last-stored
-  :desc "Clock"                      :n "c" #'org-clock-goto
-  :desc "Weekly Agenda Note"         :n "g" #'my/org-capture-goto-week-file
-  :desc "Project Notes"              :n "p" #'my/org-capture-goto-project-notes-file))
-#+end_src
-#+begin_src emacs-lisp
-(map!
- :leader
- :prefix ("n" . "notes")
- (:prefix ("c" . "clock")
-  :desc "Clock In"                      :n "i" #'org-clock-in
-  :desc "Clock Out"                     :n "o" #'org-clock-out
-  :desc "Clock In Last"                 :n "I" #'org-clock-in-last
-  :desc "Modify Effort"                 :n "e" #'org-clock-modify-effort-estimate
-  :desc "Toggle last clock"             :n "l" #'+org/toggle-last-clock
-  :desc "Resolve Timeclocks"            :n "r" #'org-resolve-clocks
-  :desc "Time Report"                   :n "R" #'org-clock-report
-  :desc "Goto Clock"                    :n "g" #'org-clock-goto
-  :desc "Clock Jumplist"                :n "c" #'my/org-clock-jumplist
-  :desc "Cancel Clock"                  :n "C" #'org-clock-cancel))
-#+end_src
-
-******** Org Agenda Mappings
-#+begin_src emacs-lisp
-(map! :leader
-      :desc "My Agenda" :n "\\" #'my/org-agenda)
-(map! :map org-agenda-mode-map
-      :localleader
-      :desc "Add Id" :n "I" #'my/org-agenda-id-get-create)
-#+end_src
-
-****** Org Super Agenda
-#+begin_src emacs-lisp
-(use-package! org-super-agenda
-  :after
-  org
-  :config
-  <<org-super-agenda-config>>
-  )
-#+end_src
-******* Config
-:PROPERTIES:
-:header-args: :noweb-ref org-super-agenda-config
-:END:
-Make sure the ~org-super-agenda-groups~ get used and ensure the keymaps aren't
-different for the group header lines.
-#+begin_src emacs-lisp
-(org-super-agenda-mode)
-(setq org-super-agenda-header-map (make-sparse-keymap))
-#+end_src
-
-My default ~org-agenda~ command
-#+begin_src emacs-lisp
-(defun my/org-agenda ()
-  "Open my default preset for org-agenda"
-  (interactive)
-  (org-agenda nil "n"))
-#+end_src
-
-Custom commands for displaying the agenda
-#+begin_src emacs-lisp
-(setq org-agenda-custom-commands
-      '(("n" "Today and TODOs"
-         ((agenda "" ((org-agenda-overriding-header "")
-                      (org-agenda-include-diary t)
-                      (org-deadline-warning-days 7)
-                      (org-agenda-span 'day)
-                      (org-super-agenda-groups
-                       '((:name "Today"
-                          :time-grid t)
-                         (:name "Important"
-                          :priority "A")
-                         (:name "Personal"
-                          :and (
-                                :not (:children todo)
-                                :tag "Personal"))
-                         (:name "Projects"
-                          :tag "PROJECT"
-                          :order 3)
-                         (:auto-outline-path t
-                          :order 4)))))
-
-
-          (alltodo "" ((org-super-agenda-groups
-                        '((:name "Inbox"
-                           :tag "INBOX")
-                          (:discard (:habit t :todo "DONE" :todo "KILL" :scheduled today :deadline today))
-                          (:name "Important"
-                           :priority "A")
-                          (:auto-outline-path t :order 5)
-                          (:name "HOLD" :and (:not (:tag "PROJECT") :todo "HOLD") :order 100)
-                          (:name "Projects"
-                           :and (:not (:children todo)
-                                 :tag "PROJECT")
-                           :order 4)
-                          (:name "Personal"
-                           :and (:not (:children todo)
-                                 :tag "Personal")
-                           :order 1)
-                          (:discard (:children todo)))))))
-
-         ((org-agenda-prefix-format '((agenda . "%i %?-12t%-12s") (todo . "  %-5e %i") (tags . "%i") (search . "%i")))))))
-#+end_src
-
-**** Flags
-***** +pretty
-~use-package!~ from in the [[Use Packages]] section and other general flag [[Config]]
-#+begin_src emacs-lisp :tangle modules/my_lang/org/flags/pretty.el :lexical t :noweb yes
-;;;###if (modulep! +pretty)
-<<modules-my_lang-org-pretty-config>>
-<<modules-my_lang-org-pretty-use-packages>>
-#+end_src
-
-Packages included with this flag
-#+begin_src emacs-lisp :noweb-ref modules-my_lang-org-flag-packages
-(when (modulep! +pretty)
-  (package! org-modern))
-#+end_src
-****** Config
-:PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-pretty-config
-:END:
-****** Use Packages
-:PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-pretty-use-packages
-:END:
-******* Org-Modern
-#+begin_src emacs-lisp :noweb yes
-(use-package! org-modern
+(use-package org-capture
+  :after org
+  :bind (("C-c RET" . #'org-capture))
   :init
-  <<org-modern-keymaps>>
+  (defun my/org-capture-file-work ()
+    "The file in which to place work related notes and tasks"
+    (expand-file-name "work.org" org-agenda-directory))
+
+  (defvar my/org-capture-file-inbox (expand-file-name "inbox.org" org-agenda-directory)
+    "My default inbox for org captures")
+  
+  (cl-defun my/org-capture-template-builder (&optional &key (keyword "") (tags "%^G") (props ":STYLE: note") (priority (concat "[#" (string org-default-priority) "]")) (title "%?") (body "%i"))
+    "The base template used by task templates"
+    (format "* %s %s %s %s\n:PROPERTIES:\n:CREATED: %%U\n%s\n:END:\n%s\n" keyword priority title tags props body))
+
+  (defun my/org-capture-template-note (&optional tags)
+    "The base template used by note templates"
+    (if tags
+	    (my/org-capture-template-builder :tags tags)
+      (my/org-capture-template-builder)))
+  
+  (defun my/org-capture-template-task (&optional tags)
+    "The base template used by task templates"
+    (if tags
+	    (my/org-capture-template-builder :keyword "TODO" :tags tags :props ":STYLE: task")
+      (my/org-capture-template-builder :keyword "TODO" :props ":STYLE: task")))
+
+  
   :config
-  <<org-modern-config>>)
+  <<mu4e-capture>>
+  :custom
+  (org-capture-templates
+   '(("c" "Clocked-in")
+     ("cn" "Add note to Clocked-in"
+      item (clock)
+      "- Note taken on %U \\\\ %?")
+     ("ct" "Add subtask to Clocked-in"
+      entry (clock)
+      #'my/org-capture-template-task
+      :unnarrowed t)
+     
+     ("i" "Inbox")
+     ("it" "Inbox Task"
+      entry (file my/org-capture-file-inbox)
+      #'my/org-capture-template-task)
+     ("ic" "Clock-In Inbox Task"
+      entry (file my/org-capture-file-inbox)
+      #'my/org-capture-template-task
+      :clock-keep 't
+      :clock-in 't)
+     ("in" "Inbox Note"
+      entry (file my/org-capture-file-inbox)
+      #'my/org-capture-template-note))))
 #+end_src
-******** Config
-:PROPERTIES:
-:header-args:      :noweb-ref org-modern-config
-:END:
+***** Org-Super-Agenda
 #+begin_src emacs-lisp
-(global-org-modern-mode)
-(add-hook! org-agenda-finalize-hook #'org-modern-agenda)
+(use-package org-super-agenda
+  :after org
+  :custom
+  (org-agenda-category-icon-alist `(("inbox" ,(list (all-the-icons-faicon "inbox" :height 1.0)) nil nil :ascent center)
+                                    ("finances" ,(list (all-the-icons-faicon "usd" :height 1.0)) nil nil :ascent center)
+                                    ("calendar" ,(list (all-the-icons-faicon "calendar" :height 1.0)) nil nil :ascent center)
+                                    ("school" ,(list (all-the-icons-faicon "graduation-cap" :height 1.0)) nil nil :ascent center)
+                                    ("personal" ,(list (all-the-icons-faicon "user" :height 1.0)) nil nil :ascent center)
+                                    ("trans" ,(list (all-the-icons-faicon "transgender" :height 1.0)) nil nil :ascent center)
+                                    ("homelab" ,(list (all-the-icons-faicon "server" :height 1.0)) nil nil :ascent center)
+                                    ("emacs" ,(list (all-the-icons-faicon "file-code-o" :height 1.0)) nil nil :ascent center)
+                                    ("org" ,(list (all-the-icons-faicon "file-text" :height 1.0)) nil nil :ascent center)
+                                    ("work" ,(list (all-the-icons-faicon "briefcase" :height 1.0)) nil nil :ascent center)
+                                    ("career" ,(list (all-the-icons-faicon "building-o" :height 1.0)) nil nil :ascent center)))
+  (org-agenda-prefix-format '((agenda . "%-4i %?-12t%-12s") (todo . "  %-5e %i") (tags . "%i") (search . "%i")))
+  (org-agenda-custom-commands
+   '(("a" "Agenda"
+      ((agenda "" ((org-agenda-overriding-header "")
+                   (org-agenda-include-diary t)
+                   (org-deadline-warning-days 7)
+                   (org-agenda-span 'day)
+                   (org-super-agenda-groups
+                    '((:name "Today"
+                             :time-grid t)
+                      (:name "Important"
+                             :priority "1")
+                      (:name "Personal"
+                             :and (
+                                   :not (:children todo)
+                                   :tag "Personal"))
+                      (:name "Projects"
+                             :tag "PROJECT"
+                             :order 3)
+                      (:auto-outline-path t
+                                          :order 4)))))))
+     ("t" "Tasks"
+      ((alltodo "" ((org-super-agenda-groups
+                     '((:name "Inbox"
+                              :file-path "*inbox.org")
+                       (:name "Today"
+                              :scheduled today
+                              :deadline today)
+                       (:discard (:habit t :todo "DONE" :todo "KILL" :not (:property ("STYLE" "task"))))
+                       (:name "Important"
+                              :priority "A"
+                              :priority "B")
+                       ;; (:auto-outline-path t :order 5)
+                       (:name "HOLD"
+                              :todo "HOLD"
+                              :order 100)
+                       (:name "Personal"
+                              :tag "personal"
+                              :order 1)
+                       (:discard (:children todo))))))))))
+  :config
+  (org-super-agenda-mode)
+  ;;  ensure the keymaps aren't different for the group header lines
+  (setq org-super-agenda-header-map (make-sparse-keymap)))
 #+end_src
-******** Keymaps
-:PROPERTIES:
-:header-args:      :noweb-ref org-modern-keymaps
-:END:
 
-***** +noter
-~use-package!~ from in the  [[Use Packages]] section and other general flag [[Config]]
-#+begin_src emacs-lisp :tangle modules/my_lang/org/flags/noter.el :lexical t :noweb yes
-;;;###if (modulep! +noter)
-<<modules-my_lang-org-noter-config>>
-<<modules-my_lang-org-noter-use-packages>>
-#+end_src
-
-Packages included with this flag
-#+begin_src emacs-lisp :noweb-ref modules-my_lang-org-flag-packages
-(when (modulep! +noter)
-  (package! org-noter))
-#+end_src
-
-****** Checks
-#+begin_src emacs-lisp :tangle modules/my_lang/org/doctor.el
-(when (and (modulep! +noter) (not (modulep! :lang org +noter))
-  (warn! "The :my_lang org +noter flag is intended to be used with :lang org +noter, not doing so is undefined behavior")
-#+end_src
-****** Config
-:PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-noter-config
-:END:
-****** Use Packages
-:PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-noter-use-packages
-:END:
-******* Org-Noter
+***** Org-Noter
 #+begin_src emacs-lisp :noweb yes
 (use-package! org-noter
   :defer t
+  :when (modulep! +noter)
   :init
-  (list
-    <<org-noter-keymaps>>
-    )
+  (map!
+   :map org-mode-map
+   :localleader
+   :desc "Org noter"                   "N" #'org-noter
+   :desc "Import Skeleton"             "S" #'org-noter-create-skeleton
+   :desc "Goto Notes page"             ";" #'org-noter-sync-current-note
+   :desc "Goto next notes page"        "j" #'org-noter-sync-prev-note
+   :desc "Goto prev notes page"        "k" #'org-noter-sync-next-note
+   :desc "Kill Noter"                  "K" #'org-noter-kill-session)
+  (map!
+   :when (modulep! :tools pdf)
+   :map pdf-view-mode-map
+   :localleader
+   :desc "Noter"                       "n" #'org-noter
+   :desc "Insert Note"                 "i" #'org-noter-insert-note
+   :desc "Insert Skeleton"             "S" #'org-noter-create-skeleton
+   :desc "Insert Precise Note"         "I" #'org-noter-insert-precise-note
+   :desc "Kill Noter"                  "K" #'org-noter-kill-session
+   :desc "Goto pages Notes"            ";" #'org-noter-sync-current-page-or-chapter
+   :desc "Goto next page with notes"   "j" #'org-noter-sync-next-page-or-chapter
+   :desc "Goto prev page with notes"   "k" #'org-noter-sync-prev-page-or-chapter)
+
   :config
-  <<org-noter-config>>)
-#+end_src
-******** Config
-:PROPERTIES:
-:header-args:      :noweb-ref org-noter-config
-:END:
-#+begin_src emacs-lisp :results silent
-(setq org-noter-notes-search-path
+  (setq org-noter-notes-search-path
       (mapcar (lambda (x) (expand-file-name x org-directory)) '("agenda" "notes" "pages")))
-(unless org-noter-notes-search-path
-  (setq org-noter-notes-search-path (list org-directory)))
-(org-noter-enable-org-roam-integration)
-(org-noter-enable-update-renames)
+  (unless org-noter-notes-search-path
+    (setq org-noter-notes-search-path (list org-directory)))
+  (org-noter-enable-org-roam-integration)
+  (org-noter-enable-update-renames))
 #+end_src
-******** Keymaps
-:PROPERTIES:
-:header-args:      :noweb-ref org-noter-keymaps
-:END:
-#+begin_src emacs-lisp :tangle no
-(map!
- :map org-mode-map
- :localleader
- :desc "Org noter"                   "N" #'org-noter
- :desc "Import Skeleton"             "S" #'org-noter-create-skeleton
- :desc "Goto Notes page"             ";" #'org-noter-sync-current-note
- :desc "Goto next notes page"        "j" #'org-noter-sync-prev-note
- :desc "Goto prev notes page"        "k" #'org-noter-sync-next-note
- :desc "Kill Noter"                  "K" #'org-noter-kill-session)
-#+end_src
-
-#+begin_src emacs-lisp :tangle no
- (map!
-  :when (modulep! :tools pdf)
-  :map pdf-view-mode-map
-  :localleader
-  :desc "Noter"                       "n" #'org-noter
-  :desc "Insert Note"                 "i" #'org-noter-insert-note
-  :desc "Insert Skeleton"             "S" #'org-noter-create-skeleton
-  :desc "Insert Precise Note"         "I" #'org-noter-insert-precise-note
-  :desc "Kill Noter"                  "K" #'org-noter-kill-session
-  :desc "Goto pages Notes"            ";" #'org-noter-sync-current-page-or-chapter
-  :desc "Goto next page with notes"   "j" #'org-noter-sync-next-page-or-chapter
-  :desc "Goto prev page with notes"   "k" #'org-noter-sync-prev-page-or-chapter)
-#+end_src
-***** +roam
-~use-package!~ from in the [[Use Packages]] section and other general flag [[Config]]
-#+begin_src emacs-lisp :tangle modules/my_lang/org/flags/roam.el :lexical t :noweb yes
-;;;###if (modulep! +roam)
-<<modules-my_lang-org-roam-config>>
-<<modules-my_lang-org-roam-use-packages>>
-#+end_src
-
-Packages included with this flag
-#+begin_src emacs-lisp :noweb-ref modules-my_lang-org-flag-packages
-(when (modulep! +roam)
-  (package! org-roam))
-  #+end_src
-
-****** Checks
-#+begin_src emacs-lisp :tangle modules/my_lang/org/doctor.el
-(when (and (modulep! +roam) (not (modulep! :lang org +roam2))
-  (warn! "The :my_lang org +roam flag is intended to be used with :lang org +roam2, not doing so is undefined behavior")
-#+end_src
-****** Config
-:PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-roam-config
-:END:
-****** Use Packages
-:PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-roam-use-packages
-:END:
-******* Org-Roam
+***** Org-Modern
 #+begin_src emacs-lisp :noweb yes
-(use-package! org-roam
+(use-package! org-modern
   :after org
-  :init
-  (list
-    <<org-roam-keymaps>>
-    )
+  :when (modulep! +pretty)
   :config
-  <<org-roam-config>>)
-#+end_src
-******** Config
-:PROPERTIES:
-:header-args:      :noweb-ref org-roam-config
-:END:
-#+begin_src emacs-lisp
-(setq org-roam-directory (expand-file-name org-directory "roam/")
-      org-roam-db-update-on-save 't
-      org-roam-extract-new-file-path "notes/%<%Y%m%d%H%M%S>-${slug}.org"
-      org-roam-file-exclude-regexp (append (mapcar #'(lambda (x) (file-truename (expand-file-name x org-directory))) '(".Trash/" "data/" "logsec/")) (list org-attach-id-dir)))
+  (global-org-modern-mode)
+  (add-hook! org-agenda-finalize-hook #'org-modern-agenda)
 
-(defun nom/org-roam-capture-create-id ()
-  "Create id for captured note and add it to org-roam-capture-template."
-  (when (and (not org-note-abort) (org-roam-capture-p))
-    (org-roam-capture--put :id (org-id-get-create))))
+  (setq org-modern-priority
+        (quote ((?A . "")
+                (?B . "")
+                (?C . "")
+                (?D . "")
+                (?E . ""))))
 
-(let ((noteHead "#+title: ${title}\n")
-      (postHead "#+title: ${title}\n"))
-  (setq org-roam-capture-templates
-        (list
-         (list "n" "Note" 'plain "* %i%?"
-               :target (list 'file+head "notes/%<%Y%m%d%H%M%S>-${slug}.org" noteHead)
-               :empty-lines-before 1
-               :unnarrowed 't))))
-
-(add-hook 'org-capture-prepare-finalize-hook 'nom/org-roam-capture-create-id)
-(require 'org-roam-export)
-#+end_src
-******** Keymaps
-:PROPERTIES:
-:header-args:      :noweb-ref org-roam-keymaps
-:END:
-#+begin_src emacs-lisp
-(map!
- :map org-mode-map
- :localleader
- :prefix ("m" . "roam")
- :desc "Extract Subtree"      "x" #'org-roam-extract-subtree)
-
-(map!
- :leader
- :prefix ("n" . "notes")
- :desc "Find Node"                   "f" #'org-roam-node-find
- :desc "Capture Node"                "n" #'org-roam-capture
- (:prefix ("r" . "roam")
-  :desc "Open random node"           "a" #'org-roam-node-random
-  :desc "Find node"                  "f" #'org-roam-node-find
-  :desc "Find ref"                   "F" #'org-roam-ref-find
-  :desc "Show graph"                 "g" #'org-roam-graph
-  :desc "Insert node"                "i" #'org-roam-node-insert
-  :desc "Capture to node"            "n" #'org-roam-capture
-  :desc "Toggle roam buffer"         "r" #'org-roam-buffer-toggle
-  :desc "Launch roam buffer"         "R" #'org-roam-buffer-display-dedicated
-  :desc "Sync database"              "s" #'org-roam-db-sync
-  (:prefix ("d" . "by date")
-   :desc "Goto previous note"        "b" #'org-roam-dailies-goto-previous-note
-   :desc "Goto date"                 "d" #'org-roam-dailies-goto-date
-   :desc "Capture date"              "D" #'org-roam-dailies-capture-date
-   :desc "Goto next note"            "f" #'org-roam-dailies-goto-next-note
-   :desc "Goto tomorrow"             "m" #'org-roam-dailies-goto-tomorrow
-   :desc "Capture tomorrow"          "M" #'org-roam-dailies-capture-tomorrow
-   :desc "Capture today"             "n" #'org-roam-dailies-capture-today
-   :desc "Goto today"                "t" #'org-roam-dailies-goto-today
-   :desc "Capture today"             "T" #'org-roam-dailies-capture-today
-   :desc "Goto yesterday"            "y" #'org-roam-dailies-goto-yesterday
-   :desc "Capture yesterday"         "Y" #'org-roam-dailies-capture-yesterday
-   :desc "Find directory"            "-" #'org-roam-dailies-find-directory)))
+  (setq org-modern-todo-faces
+        (quote (("TODO" :background "tangerine" :foreground "white")
+                ("NEXT" :background "maroon" :foreground "white")
+                ("HOLD" :background "white" :foreground "orange")
+                ("DONE" :background "black" :foreground "green")
+                ("KILL" :background "black" :foreground "red")))))
 #+end_src
 
-***** +roam-ui
-~use-package!~ from in the [[Use Packages]] section and other general flag [[Config]]
-#+begin_src emacs-lisp :tangle modules/my_lang/org/flags/roam-ui.el :lexical t :noweb yes
-;;;###if (modulep! +roam-ui)
-<<modules-my_lang-org-roam-ui-config>>
-<<modules-my_lang-org-roam-ui-use-packages>>
-#+end_src
-
-Packages included with this flag
-#+begin_src emacs-lisp :noweb-ref modules-my_lang-org-flag-packages
-(when (modulep! +roam-ui)
-  (package! org-roam-ui)
-  (unpin! org-roam))
-#+end_src
-
-****** Checks
-#+begin_src emacs-lisp :tangle modules/my_lang/org/doctor.el
-(when (and (modulep! +roam-ui) (not (modulep! +roam))
-  (error! "You are using the roam-ui flag without the roam flag, this is undefined behavior")
-#+end_src
-****** Config
-:PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-roam-ui-config
-:END:
-****** Use Packages
-:PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-roam-ui-use-packages
-:END:
-******* Org-Roam-UI
+***** Org-Roam-UI
 #+begin_src emacs-lisp :noweb yes
 (use-package! org-roam-ui
+  :when (modulep! +roam-ui)
   :after org-roam ;; or :after org
   ;;  normally we'd recommend hooking orui after org-roam, but since org-roam does not have
   ;;  a hookable mode anymore, you're advised to pick something yourself
   ;;  if you don't care about startup time, use
   ;;  :hook (after-init . org-roam-ui-mode)
-  :init
-  (list
-    <<org-roam-ui-keymaps>>
-    )
-  :config
-  <<org-roam-ui-config>>)
+  :custom
+  (org-roam-ui-sync-theme t)
+  (org-roam-ui-follow t)
+  (org-roam-ui-update-on-save t)
+  (org-roam-ui-open-on-start t))
 #+end_src
-******** Keymaps
-:PROPERTIES:
-:header-args: :noweb-ref org-roam-ui-keymaps
-:END:
-******** Config
-:PROPERTIES:
-:header-args: :noweb-ref org-roam-ui-config
-:END:
-#+begin_src emacs-lisp
-(setq org-roam-ui-sync-theme t
-      org-roam-ui-follow t
-      org-roam-ui-update-on-save t
-      org-roam-ui-open-on-start t)
-#+end_src
-******* Websocket
+***** Websocket
 #+name:use_websocket
 #+begin_src emacs-lisp :noweb yes
 (use-package! websocket
+    :when (modulep! +roam-ui)
     :after org-roam)
 #+end_src
-***** +query
-~use-package!~ from in the [[Use Packages]] section and other general flag [[Config]]
-#+begin_src emacs-lisp :tangle modules/my_lang/org/flags/query.el :lexical t :noweb yes
-;;;###if (modulep! +query)
-<<modules-my_lang-org-query-config>>
-<<modules-my_lang-org-query-use-packages>>
-#+end_src
-
-Packages included with this flag
-#+begin_src emacs-lisp :noweb-ref modules-my_lang-org-flag-packages
-(when (modulep! +query)
-  (package! org-ql)
-  (when (modulep! +roam)
-    (package! org-roam-ql)
-    (package! org-roam-ql-ql)))
-  #+end_src
-
-****** Config
-:PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-query-config
-:END:
-****** Use Packages
-:PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-query-use-packages
-:END:
-******* Org-ql
+***** Org-ql
 #+begin_src emacs-lisp
 (use-package! org-ql
   :defer t
+  :when (modulep! +query)
   :init
-    <<org-ql-keymaps>>
-    )
-#+end_src
-******** Config
-:PROPERTIES:
-:header-args: :noweb-ref org-ql-config
-:END:
-******** Keymaps
-:PROPERTIES:
-:header-args: :noweb-ref org-ql-keymaps
-:END:
-#+begin_src emacs-lisp
-(map!
- :leader
- :prefix ("n" . "notes")
- (:prefix ("q" . "query")
-  :desc "Views"               "v" #'org-ql-view
-  :desc "Find"                "f" #'org-ql-find
-  :desc "Query Entries"       "q" #'org-ql-search))
+  (map!
+   :leader
+   :prefix ("n" . "notes")
+   (:prefix ("q" . "query")
+            :desc "Views"               "v" #'org-ql-view
+            :desc "Find"                "f" #'org-ql-find
+            :desc "Query Entries"       "q" #'org-ql-search)))
 #+end_src
 
-******* Org-roam-ql
+***** Org-roam-ql
 #+begin_src emacs-lisp
 (use-package! org-roam-ql
   :defer t
+  :when (modulep! +query)
   :init
-    <<org-roam-ql-keymaps>>
-    )
-#+end_src
-******** Keymaps
-:PROPERTIES:
-:header-args: :noweb-ref org-roam-ql-keymaps
-:END:
-#+begin_src emacs-lisp
-(map!
- :map org-roam-ql-mode-map
- :desc "Query Dispatch" :n "q" #'org-roam-ql-buffer-dispatch)
+    (map!
+     :map org-roam-ql-mode-map
+     :desc "Query Dispatch" :n "q" #'org-roam-ql-buffer-dispatch)
 
-(map!
- :leader
- :prefix ("n" . "notes")
- :desc "Query Nodes"     "q" #'org-roam-ql-search)
+    (map!
+     :leader
+     :prefix ("n" . "notes")
+     :desc "Query Nodes"     "q" #'org-roam-ql-search))
 #+end_src
 
-******* Org-roam-ql-ql
+***** Org-roam-ql-ql
 #+begin_src emacs-lisp
 (use-package! org-roam-ql-ql
+  :when (modulep! +query)
   :defer t)
 #+end_src
 
-***** +present
-~use-package!~ from in the [[Use Packages]] section and other general flag [[Config]]
-#+begin_src emacs-lisp :tangle modules/my_lang/org/flags/present.el :lexical t :noweb yes
-;;;###if (modulep! +present)
-<<modules-my_lang-org-present-config>>
-<<modules-my_lang-org-present-use-packages>>
-#+end_src
-
-Packages included with this flag
 #+begin_src emacs-lisp :noweb-ref modules-my_lang-org-flag-packages
-(when (modulep! +present)
-  (package! org-present))
+
   #+end_src
 
-****** Config
-:PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-present-config
-:END:
-****** Use Packages
-:PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-present-use-packages
-:END:
-******* Org-present
+***** Org-present
 #+begin_src emacs-lisp :lexical t :noweb yes
 (use-package! org-present
-  :defer t
-  :init
-  (list
-    <<org-present-keymaps>>
-    )
-  :config
-  <<org-present-config>>)
-#+end_src
-******** Config
-:PROPERTIES:
-:header-args: :noweb-ref org-present-config
-:END:
-#+begin_src emacs-lisp
-;; Configure fill width
-(setq visual-fill-column-width 130
-      visual-fill-column-center-text t)
+              :defer t
+              :when (modulep! +present)
+              :init
+              (map!
+               :map org-mode-map
+               :i "SPC" 'nil
+               :n "J" 'nil
+               :niv "s-[" #'my/org-present-prev
+               :niv "s-]" #'my/org-present-next)
+              :config
+              ;; Configure fill width
+              (setq visual-fill-column-width 130
+                    visual-fill-column-center-text t)
 
-(defun my/org-present-next (&optional ARG)
-  (interactive)
-  (unless ARG (setq ARG 1))
-  (my/org-present-change-heading ARG))
+              (defun my/org-present-next (&optional ARG)
+                (interactive)
+                (unless ARG (setq ARG 1))
+                (my/org-present-change-heading ARG))
 
-(defun my/org-present-prev (&optional ARG)
-  (interactive)
-  (if ARG (setq ARG (- ARG))(setq ARG -1))
-  (my/org-present-change-heading ARG))
+              (defun my/org-present-prev (&optional ARG)
+                (interactive)
+                (if ARG (setq ARG (- ARG))(setq ARG -1))
+                (my/org-present-change-heading ARG))
 
-(defun my/org-present-change-heading (ARG)
-  (doom/widen-indirectly-narrowed-buffer)
-  (org-next-visible-heading ARG)
-  (org-narrow-to-subtree)
-  (my/org-present-prepare-slide))
+              (defun my/org-present-change-heading (ARG)
+                (doom/widen-indirectly-narrowed-buffer)
+                (org-next-visible-heading ARG)
+                (org-narrow-to-subtree)
+                (my/org-present-prepare-slide))
 
-(defun my/org-present-toggle-cursor ()
-  (interactive)
-  (if cursor-hidden (progn (org-present-show-cursor)
-                           (hl-line-mode 1)
-                           (setq cursor-hidden 'nil)
-                           (message "Cursor Shown"))
-    (progn (org-present-hide-cursor)
-           (hl-line-mode 0)
-           (setq cursor-hidden 't)
-           (message "Cursor Hidden"))))
+              (defun my/org-present-toggle-cursor ()
+                (interactive)
+                (if cursor-hidden (progn (org-present-show-cursor)
+                                         (hl-line-mode 1)
+                                         (setq cursor-hidden 'nil)
+                                         (message "Cursor Shown"))
+                  (progn (org-present-hide-cursor)
+                         (hl-line-mode 0)
+                         (setq cursor-hidden 't)
+                         (message "Cursor Hidden"))))
 
-(defun my/org-present-start ()
-  (display-line-numbers-mode 0)
-  (hide-mode-line-mode 1)
-  (mixed-pitch-mode 1)
-  (flyspell-mode 0)
-  (flycheck-mode 0)
-  (writegood-mode 0)
-  ;; Center the presentation and wrap lines
-  (visual-fill-column-mode 1)
-  (visual-line-mode 1)
-  (org-present-show-cursor)
-  ;; Set a blank header line string to create blank space at the top
-  (setq header-line-format "")
-  ;; Tweak font sizes
-  (setq-local face-remapping-alist '((default (:height 1.3) variable-pitch)
-                                     (header-line (:height 3.7) variable-pitch)
-                                     (org-link (:height 1.3) org-drawer)
-                                     (org-document-title (:height 1.6) org-document-title)
-                                     (org-code (:height 1.25) org-code)
-                                     (org-table fixed-pitch shadow)
-                                     (org-verbatim (:height 1.3) org-verbatim)
-                                     (org-block (:height 1.1) org-block)
-                                     (org-block-begin-line (:height 0.7) org-block))))
+              (defun my/org-present-start ()
+                (display-line-numbers-mode 0)
+                (hide-mode-line-mode 1)
+                (mixed-pitch-mode 1)
+                (flyspell-mode 0)
+                (flycheck-mode 0)
+                (writegood-mode 0)
+                ;; Center the presentation and wrap lines
+                (visual-fill-column-mode 1)
+                (visual-line-mode 1)
+                (org-present-show-cursor)
+                ;; Set a blank header line string to create blank space at the top
+                (setq header-line-format "")
+                ;; Tweak font sizes
+                (setq-local face-remapping-alist '((default (:height 1.3) variable-pitch)
+                                                   (header-line (:height 3.7) variable-pitch)
+                                                   (org-link (:height 1.3) org-drawer)
+                                                   (org-document-title (:height 1.6) org-document-title)
+                                                   (org-code (:height 1.25) org-code)
+                                                   (org-table fixed-pitch shadow)
+                                                   (org-verbatim (:height 1.3) org-verbatim)
+                                                   (org-block (:height 1.1) org-block)
+                                                   (org-block-begin-line (:height 0.7) org-block))))
 
-(defun my/org-present-end ()
-  (display-line-numbers-mode 1)
-  (mixed-pitch-mode 1)
-  (hide-mode-line-mode 0)
-  (flyspell-mode 1)
-  (flycheck-mode 1)
-  (writegood-mode 1)
-  ;; Stop centering the document
-  (visual-fill-column-mode 0)
-  (visual-line-mode 0)
-  (setq header-line-format 'nil)
-  ;; Reset font customizations
-  (setq-local face-remapping-alist '((default default default))))
-;; Clear the header line format by setting to `nil'
+              (defun my/org-present-end ()
+                (display-line-numbers-mode 1)
+                (mixed-pitch-mode 1)
+                (hide-mode-line-mode 0)
+                (flyspell-mode 1)
+                (flycheck-mode 1)
+                (writegood-mode 1)
+                ;; Stop centering the document
+                (visual-fill-column-mode 0)
+                (visual-line-mode 0)
+                (setq header-line-format 'nil)
+                ;; Reset font customizations
+                (setq-local face-remapping-alist '((default default default))))
+              ;; Clear the header line format by setting to `nil'
 
-(defun my/org-present-prepare-slide ()
-  ;; Show only top-level headlines
-  (org-overview)
+              (defun my/org-present-prepare-slide ()
+                ;; Show only top-level headlines
+                (org-overview)
 
-  ;; Unfold the current entry
-  (org-show-entry)
+                ;; Unfold the current entry
+                (org-show-entry)
 
-  ;; Show only direct subheadings of the slide but don't expand them
-  (org-show-children))
+                ;; Show only direct subheadings of the slide but don't expand them
+                (org-show-children))
 
-(defun my/org-present-navigate (buffer-name heading)
-  (my/org-present-prepare-slide))
+              (defun my/org-present-navigate (buffer-name heading)
+                (my/org-present-prepare-slide))
 
-;; Register hooks with org-present
-(add-hook 'org-present-after-navigate-functions 'my/org-present-navigate)
-(add-hook 'org-present-mode-hook 'my/org-present-start)
-(add-hook 'org-present-mode-quit-hook 'my/org-present-end)
-#+end_src
-******** Keymaps
-:PROPERTIES:
-:header-args: :noweb-ref org-present-keymaps
-:END:
-#+begin_src emacs-lisp
-(map!
- :map org-mode-map
- :i "SPC" 'nil
- :n "J" 'nil
- :niv "s-[" #'my/org-present-prev
- :niv "s-]" #'my/org-present-next)
+              ;; Register hooks with org-present
+              (add-hook 'org-present-after-navigate-functions 'my/org-present-navigate)
+              (add-hook 'org-present-mode-hook 'my/org-present-start)
+              (add-hook 'org-present-mode-quit-hook 'my/org-present-end))
 #+end_src
 
-***** +hugo
-~use-packages!~ from in the [[Use Packages]] section and other general flag [[Config]]
-#+begin_src emacs-lisp :tangle modules/my_lang/org/flags/hugo.el :lexical t :noweb yes
-;;;###if (modulep! +hugo)
-<<modules-my_lang-org-hugo-config>>
-<<modules-my_lang-org-hugo-use-packages>>
-#+end_src
-
-Packages included with this flag
-#+begin_src emacs-lisp :noweb-ref modules-my_lang-org-flag-packages
-(when (modulep! +hugo)
-  (package! ox-hugo))
-#+end_src
-
-****** Config
-:PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-hugo-config
-:END:
-****** Use Packages
-:PROPERTIES:
-:header-args: :noweb-ref modules-my_lang-org-hugo-use-packages
-:END:
-
-******* Ox-hugo
+***** Ox-hugo
 #+begin_src emacs-lisp :noweb yes
 (use-package! ox-hugo
-  :after ox
-  :init
-  (list
-    <<ox-hugo-keymaps>>
-    )
-  :config
-  <<ox-hugo-config>>)
+              :when (modulep! +hugo)
+              :after ox)
     #+end_src
-******** Config
-:PROPERTIES:
-:header-args: :noweb-ref ox-hugo-config
-:END:
-******** Keymaps
-:PROPERTIES:
-:header-args: :noweb-ref ox-hugo-keymaps
-:END:
-***** Archive :ARCHIVE:
-****** TODO NotDeft
-:PROPERTIES:
-:ARCHIVE_TIME: 2024-07-19 Fri 11:12
-:END:
-#+begin_src emacs-lisp :tangle no
- (after! deft
-     (setq
-         deft-directory org-directory
-         deft-recursive t
-         deft-ignore-file-regexp org-file-exclude-regexp
-         deft-strip-summary-regexp
-         (concat "\\("
-             "^:.+:.*\n" ; any line with a :SOMETHING:
-             "\\|^#\\+.*\n" ; anyline starting with a #+
-             "\\|^\\*.+.*\n" ; anyline where an asterisk starts the line
-             "\\)"))
-     (advice-add 'deft-parse-title :override
-         (lambda (file contents)
-          (if deft-use-filename-as-title
-           (deft-base-filename file)
-           (let* ((case-fold-search 't)
-                  (begin (string-match "title: " contents))
-                  (end-of-begin (match-end 0))
-                  (end (string-match "\n" contents begin)))
-            (if begin
-                (substring contents end-of-begin end)
-                (format "%s" file)))))))
-#+end_src
-
 *** TODO SQL
 #+begin_src emacs-lisp :tangle packages.el
 (package! sql-indent)
@@ -1559,15 +1084,16 @@ Packages included with this flag
 
 ** My_Tools
 *** Mail
-**** Packages
-Install packages required by this module according to other modules and flags set
-#+begin_src emacs-lisp :tangle modules/my_tools/mail/packages.el :lexical t
-#+end_src
 **** Checks
 :PROPERTIES:
 :header-args: :tangle modules/my_tools/mail/doctor.el :lexical t
 :END:
 Modules sanity checks run on ~doom doctor~
+***** Doom Mail Module
+#+begin_src emacs-lisp
+(unless (modulep! :email mu4e)
+  (warn! "Module my_tools/mu4e is expected to be run with Module email/mu4e, not doing so is undefined behavior"))
+#+end_src
 ***** Mu Binary Dependency
 #+begin_src emacs-lisp
 (unless (executable-find "mu")
@@ -1585,132 +1111,229 @@ Modules sanity checks run on ~doom doctor~
   (warn! "`msmtp` executable could not be found, Please install it and make sure it is on your PATH"))
 #+end_src
 **** Configuration
-The bulk of the modules actual configuration
-#+begin_src emacs-lisp :tangle modules/my_tools/mail/config.el
-<<modules-my_tools-mail-config>>
-<<modules-my_tools-mail-use-packages>>
-<<modules-load_flags>>
-#+end_src
-
-***** Use Packages
 :PROPERTIES:
-:header-args: :noweb-ref modules-my_tools-mail-use-packages
+:header-args:emacs-lisp: :tangle modules/my_tools/mail/config.el :noweb yes
 :END:
-****** Mu4e
+***** Mu4e
 #+begin_src emacs-lisp
 (use-package! mu4e
+  :commands (mu4e org-mu4e-open)
+  :defer t
+  :bind (:map ch/application-map
+              ("m" . #'mu4e)
+              :map mu4e-main-mode-map
+              ("J" . #'mu4e-search-maildir)
+              ("I" . #'mu4e-update-index)
+              :map mu4e-headers-mode-map
+              ("J" . #'mu4e-search-maildir)
+              ("U" . #'mu4e-update-mail-and-index)
+              ("I" . #'mu4e-update-index)
+              ("m" . #'mu4e-headers-mark-for-something)
+              ("M" . #'mu4e-headers-mark-for-move)
+              ("X" . #'mu4e-mark-resolve-deferred-marks)
+              :map mu4e-view-mode-map
+              ("J" . #'mu4e-search-maildir)
+              ("U" . #'mu4e-update-mail-and-index)
+              ("I" . #'mu4e-update-index)
+              ("m" . #'mu4e-view-mark-for-something)
+              ("M" . #'mu4e-view-mark-for-move)
+              ("X" . #'mu4e-mark-resolve-deferred-marks)
+              )
+
+  :init
+  (defvar ch/mu4e-workspace-name "Mail"
+    "The name of the workspace that mu4e will be started in")
+  (defun ch/render-html-message ()
+    (let ((dom (libxml-parse-html-region (point-min) (point-max))))
+      (erase-buffer)
+      (shr-insert-document dom)
+      (goto-char (point-min))))
+  (defvar ch/org-capture-email-tag "EMAIL"
+    "Tag to be added to captures created from emails")
+  :custom
+  (mu4e-context-policy 'pick-first)
+  (mu4e-mu-binary (executable-find "mu"))
+  (org-mu4e-link-query-in-headers-mode nil)
+  (mu4e-maildir "~/.maildir")
+  (mu4e-notification-support t)
+  (mu4e-get-mail-command (concat (executable-find "mbsync") " -a"))
+  (mu4e-html2text-command 'ch/render-html-message)
+  (mu4e-update-interval 300) ;; seconds
+  (mu4e-attachment-dir "~/Desktop")
+  (message-citation-line-format "%N @ %Y-%m-%d %H:%M :\n")
+  (mu4e-headers-visible-lines 20)
+  (mu4e-change-filenames-when-moving 't)
+  (mu4e-split-view 'horizontal)
+  (mu4e-index-cleanup t)
+  (mu4e-index-lazy-check t)    ;; don't consider up-to-date dirs)
+  (mu4e-compose-context-policy 'ask) ;; ask for context if no context matches;
+    (mail-user-agent 'mu4e-user-agent)
+  (message-mail-user-agent 'mu4e-user-agent)
+  (mu4e-headers-fields
+        '((:account . 10)
+          (:human-date . 12)
+          (:flags . 6) ; 3 icon flags
+          (:from-or-to . 25)
+          (:subject)))
+  (mu4e-use-fancy-chars t)
+  
   :config
-  <<mu4e-config>>)
-#+end_src
+  (setq mu4e-headers-new-mark '("N". " 󱉲"))
+  (setq mu4e-headers-draft-mark '("D". " "))
+  (setq mu4e-headers-unread-mark '("u". " 󰇮"))
+  (setq mu4e-headers-seen-mark '("S". " 󰇯"))
+  (setq mu4e-headers-replied-mark '("R". " "))
+  (setq mu4e-headers-passed-mark '("P". " "))
+  (setq mu4e-headers-attach-mark '("a". " 󰁦"))
+  (setq mu4e-headers-list-mark '("L". " "))
+  (setq mu4e-headers-trashed-mark '("T". " "))
+  (setq mu4e-headers-calendar-mark '("c". " "))
+  (setq mu4e-headers-personal-mark '("p". " "))
+  (setq mu4e-headers-signed-mark '("s". " 󰷼"))
+  (setq mu4e-headers-encrypted-mark '("x". " 󰌋"))
+  (setq mu4e-modeline-all-read '("R:" . " 󰇯"))
+  (setq mu4e-modeline-all-clear '("C:" . " 󰚇"))
+  (setq mu4e-modeline-new-items '("N:" . " 󱉲"))
+  (setq mu4e-modeline-unread-items '("U:" . " 󰇮"))
 
-******* Config
+  (persp-def-auto-persp ch/mu4e-workspace-name
+                        :parameters '((dont-save-to-file . t))
+                        :buffer-name (regexp-opt (list mu4e-main-buffer-name
+                                                       mu4e-view-buffer-name
+                                                       mu4e-embedded-buffer-name
+                                                       mu4e-headers-buffer-name
+                                                       mu4e--sexp-buffer-name
+                                                       mu4e--log-buffer-name
+                                                       mu4e-last-update-buffer))
+                        :dyn-env '(after-switch-to-buffer-functions
+                                   persp-add-buffer-on-find-file)
+                        :hooks '(mu4e-main-mode-hook
+                                 mu4e-headers-mode-hook
+                                 mu4e-loading-mode-hook
+                                 mu4e-org-mode-hook
+                                 mu4e-view-mode-hook
+                                 mu4e-thread-mode-hook
+                                 mu4e-compose-mode-hook
+                                 mu4e-modeline-mode-hook
+                                 mu4e-raw-view-mode-hook
+                                 mu4e--update-mail-mode-hook)
+                        :switch 'window
+                        :after-match
+                        #'(lambda (state)
+                            (define-advice mu4e (:override (args) ch/mu4e-persp-advice)
+                              (persp-switch ch/mu4e-workspace-name))
+                            (advise-once 'mu4e-quit :after-while
+                                         #'(lambda (&rest args)
+                                           (persp-kill ch/mu4e-workspace-name)
+                                           (advice-remove 'mu4e 'mu4e@ch/mu4e-persp-advice)))
+                            (persp-switch ch/mu4e-workspace-name)
+                            state))
+
+  (add-to-list 'meow-mode-state-list '(mu4e-view-mode . motion))
+
+  <<mu4e-accounts>>
+  <<mu4e-sending>>
+;;  <<mu4e-hyperspace>>
+  (with-eval-after-load "mm-decode"
+    (add-to-list 'mm-discouraged-alternatives "text/html")
+    (add-to-list 'mm-discouraged-alternatives "text/richtext")))
+#+end_src
+****** Accounts
 :PROPERTIES:
-:header-args: :noweb-ref mu4e-config
+:header-args:emacs-lisp: :tangle no :noweb yes :results silent :lexical yes :comments noweb :noweb-ref mu4e-accounts
 :END:
-Some general configuration
+
+******* Address List
+
 #+begin_src emacs-lisp
-;; For rendering html email
-(defun my-render-html-message ()
-  (let ((dom (libxml-parse-html-region (point-min) (point-max))))
-    (erase-buffer)
-    (shr-insert-document dom)
-    (goto-char (point-min))))
-
-(setq mu4e-html2text-command 'my-render-html-message)
-
-(setq
-    mu4e-mu-binary (executable-find "mu")
-    mu4e-maildir "~/.maildir"
-    mu4e-get-mail-command (concat (executable-find "mbsync") " -a")
-    mu4e-update-interval 300 ;; seconds
-    mu4e-attachment-dir "~/Desktop"
-    mu4e-change-filenames-when-moving 't
-    mu4e-split-view 'horizontal
-    mu4e-index-cleanup nil      ;; TODO don't do a full cleanup check
-    mu4e-index-lazy-check t    ;; don't consider up-to-date dirs
-    mu4e-user-mail-address-list '("carson03henrich@gmail.com" "carson3henrich@gmail.com" "henricc5@wwu.edu")
-    mu4e-maildir-shortcuts '(("/gmail1/Inbox" . ?i)
-                             ("/gmail1/Important" . ?j)
-                             ("/gmail1/Sent" . ?s)
-                             ("/gmail1/Drafts" . ?d)
-                             ("/school/Inbox" . ?I)
-                             ("/school/Important" . ?J)
-                             ("/school/Sent" . ?S)
-                             ("/school/Drafts" . ?D)))
-
-(with-eval-after-load "mm-decode"
-  (add-to-list 'mm-discouraged-alternatives "text/html")
-  (add-to-list 'mm-discouraged-alternatives "text/richtext"))
+(setq mu4e-user-mail-address-list
+      '("carson03henrich@gmail.com"
+	"carson3henrich@gmail.com"
+	"henricc5@wwu.edu"))
 #+end_src
-******** Bookmarks
-the following is to show shortcuts in the main view.
 
+******* Bookmarks
 #+begin_src emacs-lisp
+(defvar ch/mu4e-inbox-folder nil)
+(defvar ch/mu4e-important-folder nil)
+
+(defun ch/set-mu4e-maildirs ()
+  (setq mu4e-maildir-shortcuts
+        (list (list :name "Inbox" :maildir ch/mu4e-inbox-folder :key ?i)
+              (list :name "Important" :maildir ch/mu4e-important-folder :key ?j)
+              (list :name "Sent" :maildir mu4e-sent-folder :key ?s)
+              (list :name "Drafts" :maildir mu4e-drafts-folder :key ?d)
+              (list :name "Archive" :maildir mu4e-refile-folder :key ?a))))
+
+(add-hook 'mu4e-context-changed-hook #'ch/set-mu4e-maildirs)
+
 (setq mu4e-bookmarks
-  '((:name "Unread messages"           :query "flag:unread AND NOT flag:trashed" :key 117)
-    (:name "Today's messages"          :query "date:today..now"                  :key 116)
-    (:name "Last 7 days"               :query "date:7d..now"                     :key 119
-           :hide-unread t)
-    (:name "Messages with images"      :query "mime:image/*"                     :key 112)
-    (:name "Flagged messages"          :query"flag:flagged"                      :key 102)
-    (:name "Inbox - Gmail (Primary)"   :query "maildir:/gmail1/Inbox"            :key ?g)
-    (:name "Inbox - Gmail (Secondary)" :query "maildir:/gmail2/Inbox"            :key ?g)
-    (:name "Inbox - Western"           :query "maildir:/school/Inbox"            :key ?w)))
+      '((:name "Unread messages"           :query "flag:unread AND NOT flag:trashed AND NOT maildir:/Trash$/" :key ?u   :favorite t)
+        (:name "Today's messages"          :query "date:today..now"                  :key ?t)
+        (:name "Last 7 days"               :query "date:7d..now"                     :key ?w)
+        (:name "Inboxes"                   :query "maildir:/Inbox$/"                 :key ?i)
+        (:name "Flagged messages"          :query "flag:flagged"                     :key ?f)))
 #+end_src
-
-******** Contexts
+******* Contexts
 #+begin_src emacs-lisp
 (setq mu4e-contexts
       (list
        (make-mu4e-context
-        :name "gmail1"
-        :match-func
-        (lambda (msg)
-          (when msg
-            (string-prefix-p "/gmail1" (mu4e-message-field msg :maildir))))
-        :vars '((user-mail-address . "carson03henrich@gmail.com")
-                (user-full-name . "Carson Henrich")
-                (smtpmail-smtp-user "carson03henrich@gmail.com")
-                (mu4e-drafts-folder . "/gmail1/Drafts")
-                (mu4e-refile-folder . "/gmail1/Archive")
-                (mu4e-sent-folder . "/gmail1/Sent")))
+	:name "1_gmail"
+	:match-func
+	(lambda (msg)
+	  (when msg (string-prefix-p "/gmail1" (mu4e-message-field msg :maildir))))
+	:vars '((user-mail-address . "carson03henrich@gmail.com")
+		(user-full-name . "Carson Henrich")
+		(smtpmail-smtp-user "carson03henrich@gmail.com")
+        (ch/mu4e-inbox-folder . "/gmail1/Inbox")
+        (ch/mu4e-important-folder . "/gmail1/Important")
+		(mu4e-drafts-folder . "/gmail1/Drafts")
+		(mu4e-refile-folder . "/gmail1/Archive")
+		(mu4e-sent-folder . "/gmail1/Sent")
+		(mu4e-trash-folder . "/gmail1/Trash")))
        (make-mu4e-context
-        :name "gmail2"
-        :match-func
-        (lambda (msg)
-          (when msg
-            (string-prefix-p "/gmail2" (mu4e-message-field msg :maildir))))
-        :vars '((user-mail-address . "carson3henrich@gmail.com")
-                (user-full-name . "Carson Henrich")
-                (smtpmail-smtp-user "carson3henrich@gmail.com")
-                (mu4e-drafts-folder . "/gmail2/Drafts")
-                (mu4e-refile-folder . "/gmail2/Archive")
-                (mu4e-sent-folder . "/gmail2/Sent")
-                (mu4e-trash-folder . "/gmail2/Trash")))
+	:name "2_gmail"
+	:match-func
+	(lambda (msg)
+	  (when msg (string-prefix-p "/gmail2" (mu4e-message-field msg :maildir))))
+	:vars '((user-mail-address . "carson3henrich@gmail.com")
+		(user-full-name . "Carson Henrich")
+		(smtpmail-smtp-user "carson3henrich@gmail.com")
+        (ch/mu4e-inbox-folder . "/gmail2/Inbox")
+        (ch/mu4e-important-folder . "/gmail2/Important")
+		(mu4e-drafts-folder . "/gmail2/Drafts")
+		(mu4e-refile-folder . "/gmail2/Archive")
+		(mu4e-sent-folder . "/gmail2/Sent")
+		(mu4e-trash-folder . "/gmail2/Trash")))
        (make-mu4e-context
-        :name "Western"
-        :match-func
-        (lambda (msg)
-          (when msg
-            (string-prefix-p "/school" (mu4e-message-field msg :maildir))))
-        :vars '((user-mail-address . "carson03henrich@gmail.com")
-                (user-full-name . "Carson Henrich")
-                (smtpmail-smtp-user "henricc5@wwu.edu")
-                (mu4e-drafts-folder . "/school/Drafts")
-                (mu4e-refile-folder . "/school/Archive")
-                (mu4e-sent-folder . "/school/Sent")
-                (mu4e-trash-folder . "/school/Trash")))))
-(setq mu4e-compose-context-policy 'ask) ;; ask for context if no context matches;
+	:name "western"
+	:match-func (lambda (msg)
+                      (when msg (string-prefix-p "/school" (mu4e-message-field msg :maildir))))
+	:vars '((user-mail-address . "henricc5@wwu.edu")
+		(user-full-name . "Carson Henrich")
+		(smtpmail-smtp-user "henricc5@wwu.edu")
+        (ch/mu4e-inbox-folder . "/school/Inbox")
+        (ch/mu4e-important-folder . "/school/Important")
+		(mu4e-drafts-folder . "/school/Drafts")
+		(mu4e-refile-folder . "/school/Archive")
+		(mu4e-sent-folder . "/school/Sent")
+		(mu4e-trash-folder . "/school/Trash")))))
 #+end_src
+****** Sending 
+:PROPERTIES:
+:header-args:emacs-lisp: :tangle no :noweb yes :results silent :lexical yes :comments noweb :noweb-ref mu4e-accounts
+:END:
+#+begin_center
+Hooks related to ~mu4e-compose-mode~ are set with a depth < 0 so that the will be
+placed before the buffer is transitioned to ~OrgMsg~ otherwise they do not run
+#+end_center
 
-******** Sending
 #+begin_src emacs-lisp
 ;; gpg encryptiom & decryption:
-;; this can be left alone
 (require 'epa-file)
 (epa-file-enable)
 (setq epa-pinentry-mode 'loopback)
-;; (auth-source-forget-all-cached)
 
 ;; don't keep message compose buffers around after sending:
 (setq message-kill-buffer-on-exit t)
@@ -1729,57 +1352,127 @@ the following is to show shortcuts in the main view.
       message-sendmail-envelope-from 'header
       mail-envelope-from 'header)
 
-;; chose from account before sending
-;; this is a custom function that works for me.
-;; well I stole it somewhere long ago.
-;; I suggest using it to make matters easy
-;; of course adjust the email adresses and account descriptions
-(defun timu/set-msmtp-account ()
-  (if (message-mail-p)
-      (save-excursion
-        (let*
-            ((from (save-restriction
-                     (message-narrow-to-headers)
-                     (message-fetch-field "from")))
-             (account
-              (cond
-               ((string-match "carson03henrich@gmail.com" from) "gmail1")
-               ((string-match "carson3henrich@gmail.com" from) "gmail2"))))
-          (setq message-sendmail-extra-arguments (list '"-a" account))))))
-;;(add-hook 'message-send-mail-hook 'timu/set-msmtp-account)
-
 ;; mu4e cc & bcc
 ;; this is custom as well
-(add-hook 'mu4e-compose-mode-hook
-          (defun timu/add-cc-and-bcc ()
-            "My Function to automatically add Cc & Bcc: headers.
+(defun timu/add-cc-and-bcc ()
+  "My Function to automatically add Cc & Bcc: headers.
     This is in the mu4e compose mode."
-            (save-excursion (message-add-header "Cc:\n"))
-            (save-excursion (message-add-header "Bcc:\n"))))
-;; mu4e address completion
-(add-hook 'mu4e-compose-mode-hook 'company-mode)
-#+end_src
+  (save-excursion (message-add-header "Cc:\n"))
+  (save-excursion (message-add-header "Bcc:\n")))
 
-******** Options
+(add-hook 'mu4e-compose-pre-hook #'org-msg-mode)
+(add-hook 'mu4e-compose-mode-hook 'timu/add-cc-and-bcc -10)
+(add-hook 'mu4e-compose-mode-hook (lambda () (flyspell-mode t)) -10)
+(add-hook 'mu4e-compose-mode-hook (lambda () (auto-fill-mode t)) -10)
+;; TODO (add-hook 'mu4e-compose-mode-hook (lambda () (writegood-mode t)) -10)
+
+(defun my/mu4e-set-reply-sender ()
+  "Select which of your particpating addresses in the previous message, that should
+  be the sender of this reply."
+  (save-excursion
+    (when mu4e-compose-parent-message ;; Ensures this is a reply
+      (let* ((participants (-filter
+                         #'(lambda (rcv) (mu4e-personal-address-p (plist-get rcv :email)))
+                         (append
+                          (mu4e-message-field mu4e-compose-parent-message :to)
+                          (mu4e-message-field mu4e-compose-parent-message :cc)
+                          (mu4e-message-field mu4e-compose-parent-message :bcc)
+                          (mu4e-message-field mu4e-compose-parent-message :from)))) ;; Allows for replying to yourself
+             (participant (if (cdr participants)
+                           (widget-choose "Select an Email to Reply from:"
+                                          (mapcar (lambda (p) (cons (plist-get p :email) p)) participants))
+                         (car participants)))
+             (email (plist-get participant :email))
+             (name (plist-get participant :name))
+             (from-header (concat "From: " (message-make-from name email))))
+
+        (when participant
+          (message-remove-header "From")
+          (message-add-header from-header))))))
+
+(add-hook 'mu4e-compose-mode-hook 'my/mu4e-set-reply-sender -10)
+#+end_src
+****** Capture Emails to Agenda
+:PROPERTIES:
+:header-args:emacs-lisp: :tangle no :noweb yes :results silent :lexical yes :comments noweb :noweb-ref mu4e-capture
+:END:
+
+Function for correctly storing a link to an email courtesy of [[https://stackoverflow.com/questions/17254967/using-org-capture-templates-with-mu4e][emacs - Using org-capture-templates with mu4e - Stack Overflow]]
+
 #+begin_src emacs-lisp
-;; store link to message if in header view, not to header query:
-(setq org-mu4e-link-query-in-headers-mode nil)
+(with-eval-after-load 'org
+  (defun org-mu4e-store-link ()
+    "Store a link to a mu4e query or message."
+    (cond
+     ;; storing links to queries
+     ((eq major-mode 'mu4e-headers-mode)
+      (let* ((query (mu4e-last-query))
+	         desc link)
+	    (org-store-link-props :type "mu4e" :query query)
+	    (setq
+	     desc (concat "mu4e:query:" query)
+	     link desc)
+	    (org-add-link-props :link link :description desc)
+	    link))
+     ;; storing links to messages
+     ((eq major-mode 'mu4e-view-mode)
+      (let* ((msg  (mu4e-message-at-point))
+	         (msgid   (or (plist-get msg :message-id) "<none>"))
+	         (from (car (car (mu4e-message-field msg :from))))
+	         (to (car (car (mu4e-message-field msg :to))))
+	         (subject (mu4e-message-field msg :subject))
+	         link)
+	    (setq link (concat "mu4e:msgid:" msgid))
+	    (org-store-link-props :type "mu4e" :link link
+			                  :message-id msgid)
+	    (setq link (concat "mu4e:msgid:" msgid))
+	    (org-store-link-props
+	     :type "mu4e" :from from :to to :subject subject
+	     :message-id msgid)
 
-;; don't have to confirm when quitting:
-(setq mu4e-confirm-quit nil)
+	    (org-add-link-props :link link
+			                :description (funcall org-mu4e-link-desc-func msg))
+	    link))))
 
-;; number of visible headers in horizontal split view:
-(setq mu4e-headers-visible-lines 20)
-
-;; don't show threading by default:
-;;(setq mu4e-headers-show-threads nil)
-
-;; customize the reply-quote-string:
-(setq message-citation-line-format "%N @ %Y-%m-%d %H:%M :\n")
-
-;; M-x find-function RET message-citation-line-format for docs:
-(setq message-citation-line-function 'message-insert-formatted-citation-line)
+  (org-add-link-type "mu4e" 'org-mu4e-open)
+  (add-hook 'org-store-link-functions 'org-mu4e-store-link))
 #+end_src
+#+begin_src emacs-lisp
+ (with-eval-after-load 'org
+   (defun my/org-capture-template-email (style)
+     "The base template used by task templates"
+     (my/org-capture-template-builder :keyword "TODO"
+                                      :title "%a"
+                                      :tags ":EMAIL:"
+                                      :props (format ":FROM:  %%:from\n:TO:  %%:to\n:STYLE:  %s\n" style)))
+   
+   (dolist (template '(("e" "Email")
+                       ("et" "Email Task"
+			entry (file my/org-capture-file-inbox)
+			(function (lambda () (my/org-capture-template-email "task"))))
+                       ("en" "Email Note"
+			entry (file my/org-capture-file-inbox)
+			(function (lambda () (my/org-capture-template-email "note"))))))
+     (add-to-list 'org-capture-templates template))
+   (add-to-list 'org-capture-templates-contexts '("e" ((in-mode . "mu4e-headers-mode")(in-mode . "mu4e-view-mode")))))
+#+end_src
+
+***** Org-Msg
+#+begin_src emacs-lisp 
+(use-package! org-msg
+              :after (org mu4e)
+              :custom
+              (org-msg-greeting-fmt "\nHi%s,\n\n")
+              (org-msg-recipient-names 'nil)
+              (org-msg-greeting-name-limit 3)
+              (org-msg-default-alternatives '((new           . (text html))
+                                              (reply-to-html . (text html))
+                                              (reply-to-text . (text))))
+              (org-msg-convert-citation t)
+              (org-msg-signature
+               "Cheers,\n\n#+begin_signature\n--\n*Carson Henrich*\n#+end_signature\n"))
+#+end_src
+
 *** TODO Magit
 #+begin_src emacs-lisp :tangle config.el
 (setq-default with-editor-emacsclient-executable "emacsclient")
@@ -1881,15 +1574,175 @@ If `DEVICE-NAME' is provided, it will be used instead of prompting the user."
               ("C-<tab>" . 'copilot-accept-completion-by-word)))
 #+end_src
 
-*** TODO Jira
-**** README
+** Editor
+*** Meow
+**** Packages
+#+begin_src emacs-lisp :tangle modules/editor/meow/packages.el :lexical nil
+(package! meow)
+(package! key-chord)
+#+end_src
 **** Configuration
+:PROPERTIES:
+:header-args:emacs-lisp: :tangle modules/editor/meow/config.el :noweb yes
+:END:
+#+begin_src emacs-lisp
+;;; -*- lexical-binding: t -*-
+#+end_src
+
+***** Meow
+#+begin_src emacs-lisp  
+(use-package! meow
+  :init
+  (defvar meow-empty-state-map (define-keymap)
+    "An empty keymap for when we don't want meow to be getting in the way")
+
+  (meow-define-state empty
+    "An empty keymap for when we don't want meow to be getting in the way"
+    :lighter " [E]"
+    :keymap meow-empty-state-map
+    (message ""))
+
+  :custom
+  (meow-cheatsheet-layout meow-cheatsheet-layout-qwerty)
+  (meow-use-clipboard t)
+  :config
+  (set-keymap-parent doom-leader-map mode-specific-map)
+  (setcdr (assq 'leader meow-keymap-alist) doom-leader-map)
+  (meow-global-mode 1)
+
+  (meow-motion-overwrite-define-key
+   '("j" . meow-next)
+   '("k" . meow-prev)
+   '("<escape>" . ignore))
+
+  (meow-leader-define-key
+   ;; SPC j/k will run the original command in MOTION state.
+   '("SPC" . "H-SPC")
+   '("j" . "H-j")
+   '("k" . "H-k")
+   ;; Use SPC (0-9) for digit arguments.
+   '("1" . meow-digit-argument)
+   '("2" . meow-digit-argument)
+   '("3" . meow-digit-argument)
+   '("4" . meow-digit-argument)
+   '("5" . meow-digit-argument)
+   '("6" . meow-digit-argument)
+   '("7" . meow-digit-argument)
+   '("8" . meow-digit-argument)
+   '("9" . meow-digit-argument)
+   '("0" . meow-digit-argument)
+   ;; Easy access utilities
+   '(";" . "M-x")
+   '(":" . "M-:")
+   '("," . switch-to-buffer)
+   '("<" . ibuffer)
+   '("." . find-file)
+   '(">" . recentf)
+   '("'" . bookmark-jump)
+   '("\"" . bookmark-set)
+   '("/" . meow-keypad-describe-key)
+   '("?" . meow-cheatsheet))
+
+  (meow-normal-define-key
+   '("0" . meow-expand-0)
+   '("9" . meow-expand-9)
+   '("8" . meow-expand-8)
+   '("7" . meow-expand-7)
+   '("6" . meow-expand-6)
+   '("5" . meow-expand-5)
+   '("4" . meow-expand-4)
+   '("3" . meow-expand-3)
+   '("2" . meow-expand-2)
+   '("1" . meow-expand-1)
+   '("-" . negative-argument)
+   '(";" . meow-reverse)
+   '("," . meow-inner-of-thing)
+   '("." . meow-bounds-of-thing)
+   '("[" . meow-beginning-of-thing)
+   '("]" . meow-end-of-thing)
+   '("a" . meow-append)
+   '("A" . meow-open-below)
+   '("b" . meow-back-word)
+   '("B" . meow-back-symbol)
+   '("c" . meow-change)
+   '("d" . meow-delete)
+   '("D" . meow-backward-delete)
+   '("e" . meow-next-word)
+   '("E" . meow-next-symbol)
+   '("f" . meow-find)
+   '("g" . meow-cancel-selection)
+   '("G" . meow-grab)
+   '("h" . meow-left)
+   '("H" . meow-left-expand)
+   '("i" . meow-insert)
+   '("I" . meow-open-above)
+   '("j" . meow-next)
+   '("J" . meow-next-expand)
+   '("k" . meow-prev)
+   '("K" . meow-prev-expand)
+   '("l" . meow-right)
+   '("L" . meow-right-expand)
+   '("m" . meow-join)
+   '("n" . meow-search)
+   '("o" . meow-block)
+   '("O" . meow-to-block)
+   '("p" . meow-yank)
+   '("P" . yank-from-kill-ring)
+   '("q" . meow-quit)
+   '("Q" . meow-goto-line)
+   '("r" . meow-replace)
+   '("R" . meow-swap-grab)
+   '("s" . meow-kill)
+   '("t" . meow-till)
+   '("u" . meow-undo)
+   '("U" . meow-undo-in-selection)
+   '("v" . meow-visit)
+   '("w" . meow-mark-word)
+   '("W" . meow-mark-symbol)
+   '("x" . meow-line)
+   '("X" . meow-goto-line)
+   '("y" . meow-save)
+   '("Y" . meow-sync-grab)
+   '("z" . meow-pop-selection)
+   '("'" . repeat)
+   '("<escape>" . ignore)))
+ #+end_src
+****** Quick Escape
+#+begin_src emacs-lisp
+  (use-package! key-chord
+    :after meow
+    :config
+    (key-chord-mode 1)
+    (key-chord-define-global "jk" 'meow-escape-or-normal-modal))
+#+end_src
+****** Application Keymap
+This is the keymap that I place what I call /Emacs Applications/ into, that
+would be things like ~dired~, ~magit~, ~mu4e~, etc.
+
+#+begin_src emacs-lisp
+  (defvar ch/application-map (make-sparse-keymap)
+    "The keymap that I place Emacs Applications into")
+
+  (keymap-set global-map "C-c o" ch/application-map)
+#+end_src
+
+****** Toggle Keymap
+This is the keymap that I place various toggles into, that would be things like
+~line-number-mode~, ~auto-fill-mode~, ~flyspell-mode~, etc.
+
+#+begin_src emacs-lisp
+  (defvar ch/toggle-map (make-sparse-keymap)
+    "The keymap that I place various toggles into")
+
+  (keymap-set global-map "C-c t" ch/toggle-map)
+#+end_src
+
 * Temporary Fixes
 Here is a place where I can place /temporary/ fixes to bugs that have cropped up
 while using my configuration. I say that they are temporary because they are
 typically a less than ideal solution for when I don't feel like going and
 actually fixing the problem.
-*** Parinfer not building on x86 Macs
+** Parinfer not building on x86 Macs
 :PROPERTIES:
 :CREATED:  [2024-07-22 Mon 19:37]
 :END:
@@ -1940,40 +1793,8 @@ This is where packages not included in modules are placed to install them.
         user-full-name "Carson Henrich"
         user-mail-address "carson03henrich@gmail.com")
 #+end_src
-** Functions
-*** toggle auto-format
-#+begin_src emacs-lisp :tangle config.el
-(setq auto-format 'nil)
-(defun my/toggle-auto-format ()
-    (interactive)
-    (if auto-format
-        (progn (remove-hook! 'before-save-hook #'+format/buffer)
-               (setq auto-format 'nil)
-               (message "Auto-format Disabled"))
-        (progn (add-hook! 'before-save-hook #'+format/buffer)
-               (setq auto-format 't)
-               (message "Auto-format Enabled"))))
-#+end_src
-
-#+RESULTS:
-: my/toggle-auto-format
-
-*** find-file-new-buffer
-Useful for checking differences between file on disk and in buffer
-puts
-#+begin_src emacs-lisp :tangle config.el
-(defun find-file-new-buffer (filename)
-  "Very basic `find-file' which does not use a pre-existing buffer, and opens the new file read-only to prevent conflicts"
-  (interactive "fFind file in new buffer: ")
-  (let ((buf (create-file-buffer filename)))
-    (with-current-buffer buf
-      (insert-file-contents filename t)
-      (read-only-mode))
-    (pop-to-buffer-same-window buf)))
-#+end_src
-
 ** Appearance
-*** Theme
+*** 
 There are two ways to load a theme. Both assume the theme is installed and
 available. You can either set ~doom-theme~ or manually load a theme with the
 ~load-theme~ function.
@@ -2039,7 +1860,6 @@ Need to set up treesitter such that it is used whenever it can be.
 (setq nerd-icons-scale-factor 1.0)
 (setq doom-modeline-height 1)
 #+end_src
-
 ** Tools
 *** Vterm
 #+begin_src emacs-lisp :tangle config.el
