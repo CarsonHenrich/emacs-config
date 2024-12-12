@@ -1,0 +1,82 @@
+branches:
+- name: main
+  protection:
+    enforce_admins: false
+    required_linear_history: true
+    required_pull_request_reviews:
+      dismiss_stale_reviews: true
+      require_code_owner_reviews: true
+      required_approving_review_count: 1
+    required_status_checks:
+      contexts: []
+      strict: true
+labels:
+- color: '#000000'
+  description: This issue has been abdandoned
+  name: 'Status: Abdandoned :skull:'
+- color: '#4CAF50'
+  description: This issue has been accepted
+  name: 'Status: Accepted :heavy_check_mark:'
+- color: '#F44336'
+  description: This issue is in a blocking state
+  name: 'Status: Blocked :x:'
+- color: '#A6A6A6'
+  description: This issue is actively being worked on
+  name: 'Status: In Progress :construction:'
+- color: '#F44336'
+  description: This issue is not currently being worked on
+  name: 'Status: On Hold :hourglass_flowing_sand:'
+- color: '#FDD835'
+  description: This issue is pending a review
+  name: 'Status: Review Needed :eyes:'
+- color: '#F44336'
+  description: This issue targets a bug
+  name: 'Type: Bug :bug:'
+- color: '#FB8C00'
+  description: This issue targets general maintenance
+  name: 'Type: Maintenance :wrench:'
+- color: '#AB47BC'
+  description: This issue contains a question
+  name: 'Type: Question :grey_question:'
+- color: '#F44336'
+  description: This issue targets a security vulnerability
+  name: 'Type: Security :cop:'
+- color: '#64B5F6'
+  description: This issue targets a new feature through a story
+  name: 'Type: Story :scroll:'
+- color: '#F44336'
+  description: This issue is prioritized as critical
+  name: 'Priority: 0 - Critical :zero:'
+- color: '#FB8C00'
+  description: This issue is prioritized as high
+  name: 'Priority: 1 - High :one:'
+- color: '#4CAF50'
+  description: This issue is prioritized as low
+  name: 'Priority: 3 - Low :three:'
+- color: '#FFEE58'
+  description: This issue is prioritized as medium
+  name: 'Priority: 2 - Medium :two:'
+- color: '#4CAF50'
+  description: This issue is of low complexity or very well understood
+  name: 'Effort: 1 :muscle:'
+- color: '#FFEE58'
+  description: This issue is of medium complexity or only partly well understood
+  name: 'Effort: 3 :muscle:'
+- color: '#F44336'
+  description: This issue is of high complexity or just not yet well understood
+  name: 'Effort: 5 :muscle:'
+repository:
+  allow_merge_commit: false
+  allow_rebase_merge: true
+  allow_squash_merge: true
+  default_branch: main
+  delete_branch_on_merge: true
+  description: My Emacs Configuration, Built with Nix
+  has_downloads: false
+  has_issues: true
+  has_projects: false
+  has_wiki: false
+  homepage: ''
+  name: emacs-config
+  private: true
+  topics: emacs, nix, emacs-twist, nix-flakes
