@@ -1,5 +1,5 @@
 {
-  description = "cmacrae's systems configuration";
+  description = "Carson Henrich's emacs configuration";
 
   nixConfig = {
     extra-substituters = [
@@ -81,6 +81,17 @@
             inherit emacs-env emacs-early-init;
           };
 
+          devShells.default = pkgs.mkShell {
+            name = "shell-default";
+
+            NIX_CONFIG = "extra-experimental-features = nix-command flakes";
+            packages = with pkgs; [
+              nix
+              git
+              cachix
+              just
+            ];
+          };
           apps = emacs-env.makeApps { lockDirName = ".lock"; };
         };
     };
