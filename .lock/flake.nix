@@ -115,6 +115,12 @@
       repo = "evil";
       type = "github";
     };
+    evil-colemak-basics = {
+      flake = false;
+      owner = "wbolster";
+      repo = "emacs-evil-colemak-basics";
+      type = "github";
+    };
     evil-collection = {
       flake = false;
       owner = "emacs-evil";

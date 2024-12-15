@@ -304,6 +304,22 @@
         "type": "github"
       }
     },
+    "evil-colemak-basics": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1728058392,
+        "narHash": "sha256-Q2KuTLPIOMKTazQBIdj/HfXpxFcQ223Ib3jHw9IQLfA=",
+        "owner": "wbolster",
+        "repo": "emacs-evil-colemak-basics",
+        "rev": "9465c8da35fe7dd0f66184e671e357ec91faa3fe",
+        "type": "github"
+      },
+      "original": {
+        "owner": "wbolster",
+        "repo": "emacs-evil-colemak-basics",
+        "type": "github"
+      }
+    },
     "evil-collection": {
       "flake": false,
       "locked": {
@@ -1029,6 +1045,7 @@
         "embark-consult": "embark-consult",
         "envrc": "envrc",
         "evil": "evil",
+        "evil-colemak-basics": "evil-colemak-basics",
         "evil-collection": "evil-collection",
         "evil-commentary": "evil-commentary",
         "evil-easymotion": "evil-easymotion",
