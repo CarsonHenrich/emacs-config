@@ -36,6 +36,7 @@
   outputs =
     inputs@{ flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [ inputs.flake-parts.flakeModules.easyOverlay ];
       systems = [
         "x86_64-darwin"
         "aarch64-darwin"
@@ -48,51 +49,70 @@
           config,
           pkgs,
           system,
-          emacs-env,
-          emacs-early-init,
+          final,
           ...
         }:
+        let
+        pkgs' = import inputs.nixpkgs {
+          inherit system;
+          overlays = [
+            inputs.emacs-overlay.overlays.emacs
+            inputs.org-babel.overlays.default
+          ];
+        };
+        in
         {
           _module.args = {
-            pkgs = import inputs.nixpkgs {
-              inherit system;
-              overlays = [
-                inputs.emacs-overlay.overlays.emacs
-                inputs.org-babel.overlays.default
-              ];
-            };
+            pkgs = pkgs';
+          };
 
-            emacs-env = import ./emacs.nix { inherit inputs pkgs; };
+          overlayAttrs = {
+            inherit (config.packages) emacs emacs-early-init emacs-env;
+          };
 
-            emacs-early-init =
-              let
-                org = inputs.org-babel.lib;
-              in
-              (pkgs.tangleOrgBabelFile "early-init.el" ./README.org {
+          packages =
+            let
+              inherit (inputs.nixpkgs) lib;
+              org = inputs.org-babel.lib;
+
+              packageOverrides = _: prev: {
+                elispPackages = prev.elispPackages.overrideScope (
+                  final.callPackage ./package-overrides.nix { inherit (prev) emacs; }
+                );
+              };
+
+              initEl = pkgs'.tangleOrgBabelFile "init.el" ./README.org {
+                processLines = org.excludeHeadlines (org.tag "early");
+              };
+            in
+            rec {
+              emacs = pkgs.emacs-pgtk;
+
+              emacs-early-init = pkgs.tangleOrgBabelFile "early-init.el" ./README.org {
                 processLines = org.selectHeadlines (org.tag "early");
-              });
+              };
 
-            config.extraSpecialArgs = {
-              inherit emacs-env emacs-early-init;
+              emacs-env =
+                (inputs.twist.lib.makeEnv {
+                  pkgs = pkgs;
+                  # NOTE Needed for hot reloading
+                  # TODO Find out if I want to do hot reloading
+                  exportManifest = true;
+
+                  emacsPackage = emacs;
+                  lockDir = ./.lock;
+                  initFiles = [ initEl ];
+                  inputOverrides = import ./input-overrides.nix { inherit lib; };
+                  registries = import ./registries.nix {
+                    inherit inputs;
+                    emacsSrc = emacs.src;
+                  };
+                }).overrideScope
+                  packageOverrides;
             };
-          };
 
-          packages = {
-            inherit emacs-env emacs-early-init;
-          };
-
-          devShells.default = pkgs.mkShell {
-            name = "shell-default";
-
-            NIX_CONFIG = "extra-experimental-features = nix-command flakes";
-            packages = with pkgs; [
-              nix
-              git
-              cachix
-              just
-            ];
-          };
-          apps = emacs-env.makeApps { lockDirName = ".lock"; };
+          devShells = import ./shell.nix { inherit pkgs; };
+          apps = config.packages.emacs-env.makeApps { lockDirName = ".lock"; };
         };
     };
 }
