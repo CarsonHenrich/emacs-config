@@ -482,5 +482,5 @@
       type = "github";
     };
   };
-  outputs = { ... }: { };
+  outputs = {...}: {};
 }

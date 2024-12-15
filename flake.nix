@@ -33,10 +33,9 @@
     emacs-overlay.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs =
-    inputs@{ flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
-      imports = [ inputs.flake-parts.flakeModules.easyOverlay ];
+  outputs = inputs @ {flake-parts, ...}:
+    flake-parts.lib.mkFlake {inherit inputs;} {
+      imports = [inputs.flake-parts.flakeModules.easyOverlay];
       systems = [
         "x86_64-darwin"
         "aarch64-darwin"
@@ -44,15 +43,13 @@
         "aarch64-linux"
       ];
 
-      perSystem =
-        {
-          config,
-          pkgs,
-          system,
-          final,
-          ...
-        }:
-        let
+      perSystem = {
+        config,
+        pkgs,
+        system,
+        final,
+        ...
+      }: let
         pkgs' = import inputs.nixpkgs {
           inherit system;
           overlays = [
@@ -60,59 +57,58 @@
             inputs.org-babel.overlays.default
           ];
         };
-        in
-        {
-          _module.args = {
-            pkgs = pkgs';
-          };
-
-          overlayAttrs = {
-            inherit (config.packages) emacs emacs-early-init emacs-env;
-          };
-
-          packages =
-            let
-              inherit (inputs.nixpkgs) lib;
-              org = inputs.org-babel.lib;
-
-              packageOverrides = _: prev: {
-                elispPackages = prev.elispPackages.overrideScope (
-                  final.callPackage ./package-overrides.nix { inherit (prev) emacs; }
-                );
-              };
-
-              initEl = pkgs'.tangleOrgBabelFile "init.el" ./README.org {
-                processLines = org.excludeHeadlines (org.tag "early");
-              };
-            in
-            rec {
-              emacs = pkgs.emacs-pgtk;
-
-              emacs-early-init = pkgs.tangleOrgBabelFile "early-init.el" ./README.org {
-                processLines = org.selectHeadlines (org.tag "early");
-              };
-
-              emacs-env =
-                (inputs.twist.lib.makeEnv {
-                  pkgs = pkgs;
-                  # NOTE Needed for hot reloading
-                  # TODO Find out if I want to do hot reloading
-                  exportManifest = true;
-
-                  emacsPackage = emacs;
-                  lockDir = ./.lock;
-                  initFiles = [ initEl ];
-                  inputOverrides = import ./input-overrides.nix { inherit lib; };
-                  registries = import ./registries.nix {
-                    inherit inputs;
-                    emacsSrc = emacs.src;
-                  };
-                }).overrideScope
-                  packageOverrides;
-            };
-
-          devShells = import ./shell.nix { inherit pkgs; };
-          apps = config.packages.emacs-env.makeApps { lockDirName = ".lock"; };
+      in {
+        _module.args = {
+          pkgs = pkgs';
         };
+        formatter = pkgs.alejandra;
+
+        overlayAttrs = {
+          inherit (config.packages) emacs emacs-early-init emacs-env;
+        };
+
+        packages = let
+          inherit (inputs.nixpkgs) lib;
+          org = inputs.org-babel.lib;
+
+          packageOverrides = _: prev: {
+            elispPackages = prev.elispPackages.overrideScope (
+              final.callPackage ./package-overrides.nix {inherit (prev) emacs;}
+            );
+          };
+
+          initEl = pkgs'.tangleOrgBabelFile "init.el" ./README.org {
+            processLines = org.excludeHeadlines (org.tag "early");
+          };
+        in rec {
+          emacs = pkgs.emacs-pgtk;
+
+          emacs-early-init = pkgs.tangleOrgBabelFile "early-init.el" ./README.org {
+            processLines = org.selectHeadlines (org.tag "early");
+          };
+
+          emacs-env =
+            (inputs.twist.lib.makeEnv {
+              pkgs = pkgs;
+              # NOTE Needed for hot reloading
+              # TODO Find out if I want to do hot reloading
+              exportManifest = true;
+
+              emacsPackage = emacs;
+              lockDir = ./.lock;
+              initFiles = [initEl];
+              inputOverrides = import ./input-overrides.nix {inherit lib;};
+              registries = import ./registries.nix {
+                inherit inputs;
+                emacsSrc = emacs.src;
+              };
+            })
+            .overrideScope
+            packageOverrides;
+        };
+
+        devShells = import ./shell.nix {inherit pkgs;};
+        apps = config.packages.emacs-env.makeApps {lockDirName = ".lock";};
+      };
     };
 }

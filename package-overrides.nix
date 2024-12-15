@@ -1,31 +1,28 @@
-{ cmake
-, emacs
-, gcc
-, git
-, nodejs_23
-, libvterm-neovim
-, python3
-,
-}:
-_final: prev: {
-
+{
+  cmake,
+  emacs,
+  gcc,
+  git,
+  nodejs_23,
+  libvterm-neovim,
+  python3,
+}: _final: prev: {
   forge = prev.forge.overrideAttrs (o: {
-    buildInputs = o.buildInputs ++ [ git ];
+    buildInputs = o.buildInputs ++ [git];
   });
 
   treemacs = prev.treemacs.overrideAttrs (o: {
-    buildInputs = o.buildInputs ++ [ git python3 ];
+    buildInputs = o.buildInputs ++ [git python3];
   });
 
   mathjax = prev.mathjax.overrideAttrs (o: {
-    buildInputs = o.buildInputs ++ [ nodejs_23 ];
+    buildInputs = o.buildInputs ++ [nodejs_23];
   });
 
-
   vterm = prev.vterm.overrideAttrs (o: {
-    nativeBuildInputs = [ cmake gcc ];
-    buildInputs = o.buildInputs ++ [ libvterm-neovim ];
-    cmakeFlags = [ "-DEMACS_SOURCE=${emacs.src}" ];
+    nativeBuildInputs = [cmake gcc];
+    buildInputs = o.buildInputs ++ [libvterm-neovim];
+    cmakeFlags = ["-DEMACS_SOURCE=${emacs.src}"];
     preBuild = ''
       mkdir -p build
       cd build
@@ -37,5 +34,4 @@ _final: prev: {
       rm -rf {CMake*,build,*.c,*.h,Makefile,*.cmake}
     '';
   });
-
 }

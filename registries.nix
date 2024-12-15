@@ -1,5 +1,7 @@
-{ inputs, emacsSrc }:
-[
+{
+  inputs,
+  emacsSrc,
+}: [
   {
     type = "melpa";
     path = ./recipes;
