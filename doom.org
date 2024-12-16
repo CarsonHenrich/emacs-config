@@ -208,12 +208,13 @@ installing doom and various other details about the file.
   (unless (server-running-p)
     (server-start)))
 #+end_src
-** MacOS Fixes
+** COMMENT MacOS Fixes
 #+begin_src emacs-lisp
 (when (string-equal system-type "darwin")
   (setq insert-directory-program "gls")
   (setq auth-source-pass-filename "~/.local/share/password-store"))
 #+end_src
+
 #+begin_src emacs-lisp :tangle early-init.el
 (defun ch/read-local-settings ()
   (with-temp-buffer
@@ -1062,6 +1063,7 @@ Very useful code blocks for when all you need is a simple diagram in some notes.
   (setq org-agenda-custom-commands
         '(("a" "Agenda"
            ((agenda "" ((org-agenda-overriding-header "")
+                        (org-agenda-use-time-grid nil)
                         (org-agenda-include-diary t)
                         (org-deadline-warning-days 7)
                         (org-agenda-span 'day)
@@ -1069,18 +1071,13 @@ Very useful code blocks for when all you need is a simple diagram in some notes.
                          '((:name "Today"
                             :time-grid t
                             :order 1)
-                           (:name "Habits"
-                            :habit t
-                            :order 2)
-                           (:name "Past"
-                             :scheduled past
-                             :deadline past
-                             :order 3)
+                           (:auto-property "STYLE"
+                            :order 3)
                            (:auto-outline-path t
                             :order 5)))))))
           ("t" "Tasks"
            ((alltodo "" ((org-super-agenda-groups
-                          `((:discard (:habit t :todo "DONE" :todo "KILL" :not (:property ("STYLE" "task"))))
+                          `((:discard (:ancestor-with-todo "TODO" :habit t :todo "DONE" :todo "KILL" :not (:property ("STYLE" "task"))))
                             (:name "Inbox"
                              :file-path "*inbox.org"
                              :order 1)
@@ -1201,7 +1198,7 @@ Very useful code blocks for when all you need is a simple diagram in some notes.
   :when (modulep! :my_lang org +roam)
   :bind (("C-c RET" . org-roam-capture)
          (:map org-mode-map
-               :prefix "C-r"
+               :prefix "H-l"
                :prefix-map ch/org-mode-roam-map
                ( "I" . ch/org-roam-create-node))
          (:map ch/notes-map
@@ -1599,7 +1596,6 @@ capture was not aborted."
    'org-babel-load-languages
    '((kotlin . t))))
 #+end_src
-
 ** My_Tools
 *** Mail
 **** Packages
@@ -2331,6 +2327,9 @@ If `DEVICE-NAME' is provided, it will be used instead of prompting the user."
 #+begin_src emacs-lisp
 (use-package! meow
      :init
+    (setq doom-leader-alt-key "C-c"
+          doom-localleader-alt-key "H-l")
+
     (defvar meow-empty-state-map (define-keymap)
       "An empty keymap for when we don't want meow to be getting in the way")
 
@@ -2371,7 +2370,7 @@ If `DEVICE-NAME' is provided, it will be used instead of prompting the user."
      '(";" . "M-x")
      '(":" . "M-:")
      '("/" . meow-keypad-describe-key)
-     '("l" . doom-localleader-alt-key)
+     '("l" . "H-l")
      '("?" . meow-cheatsheet))
 
     (meow-normal-define-key
@@ -2438,6 +2437,8 @@ If `DEVICE-NAME' is provided, it will be used instead of prompting the user."
      '("'" . repeat)
      '("<escape>" . ignore)))
  #+end_src
+
+ #+RESULTS:
 
 ***** Key Chord
 ****** Quick Escape
@@ -2683,9 +2684,6 @@ This is where packages not included in modules are placed to install them.
 * Keymaps
 ** Global
 #+begin_src emacs-lisp
-(setq doom-leader-alt-key "C-c"
-      doom-localleader-alt-key "H-l")
-
 (define-keymap :keymap global-map
   "C-x b"       #'switch-to-buffer
   "C-x 4 b"     #'switch-to-buffer-other-window
@@ -3232,13 +3230,19 @@ This is where packages not included in modules are placed to install them.
 ** Dired
 #+begin_src emacs-lisp
 (define-keymap :keymap dired-mode-map
-  "[" #'dired-prev-subdir
-  "]" #'dired-next-subdir
+  "[" #'dired-prev-dirline
+  "]" #'dired-next-dirline
   "." #'dired-omit-mode
+  "N" #'dired-create-empty-file
   "<" #'dired-omit-expunge
   ">" #'ignore
   "l" #'dired-find-file
   "h" #'dired-up-directory)
+
+(when (modulep! :emacs dired +dirvish)
+  (define-keymap :keymap dired-mode-map
+  "{" #'dirvish-subtree-up
+  "TAB" #'dirvish-subtree-toggle))
 #+end_src
 ** Repeat
 
@@ -3266,6 +3270,13 @@ This is where packages not included in modules are placed to install them.
     "M-/" #'consult-history
     "M-<up>" #'next-history-element
     "M-<down>" #'previous-history-element)
+#+end_src
+* Mode Specific Settings
+** Dired/Dirvish
+#+begin_src emacs-lisp
+(use-package! dirvish
+  :config
+  (setq dirvish-side-auto-close t))
 #+end_src
 * Appearance
 ** COMMENT Setting Sane Defaults
@@ -3376,7 +3387,12 @@ but this seems to fix the problem while I'm too lazy to actually figure it out.
 (add-hook 'emacs-startup-hook
 	  #'(lambda () (progn (which-key-mode -1)(which-key-mode 1))))
 #+end_src
-** Dired Super Slow
+** Yubikey + Magit
+#+begin_src emacs-lisp
+(setenv "SSH_AUTH_SOCK" (string-chop-newline (shell-command-to-string "gpgconf --list-dirs agent-ssh-socket")))
+
+#+end_src
+** COMMENT Dired Super Slow
 Dired is unusably slow if I enable this for some reason
 #+begin_src emacs-lisp
 (after! diff-hl
@@ -3384,6 +3400,14 @@ Dired is unusably slow if I enable this for some reason
   (remove-hook 'dired-mode-hook '+vc-gutter-enable-maybe-h))
 #+end_src
 * Workspace
+** Just
+#+begin_src emacs-lisp :tangle packages.el
+(package! just-mode)
+#+end_src
+
+#+begin_src emacs-lisp
+(use-package! just-mode)
+#+end_src
 ** Android
 #+begin_src emacs-lisp :tangle packages.el
 (package! android-mode)
@@ -3391,7 +3415,26 @@ Dired is unusably slow if I enable this for some reason
 
 #+begin_src emacs-lisp
 (use-package! android-mode
-  :defer t
   :init
-  (setq android-mode-sdk-dir (executable-find "android")))
+  (setq android-mode-sdk-dir (f-base (executable-find "avdmanager"))))
+#+end_src
+** Ledger
+#+begin_src emacs-lisp :tangle packages.el
+(package! ledger-mode)
+#+end_src
+
+#+begin_src emacs-lisp
+(use-package! ledger-mode
+  :mode ("\\.dat\\'"
+         "\\.ledger\\'")
+  :bind (:map ledger-mode-map
+	("C-x C-s" . ch/ledger-save))
+  :preface
+  (defun ch/ledger-save ()
+    "Automatically clean the ledger buffer at each save."
+    (interactive)
+    (save-excursion
+      (when (buffer-modified-p)
+        (with-demoted-errors (ledger-mode-clean-buffer))
+        (save-buffer)))))
 #+end_src
