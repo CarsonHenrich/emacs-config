@@ -228,13 +228,6 @@ Consistent, minimalistic completion UI
   :hook (after-init . vertico-mode)
   :custom
   (vertico-resize t))
-
-;; (use-package vertico-posframe
-;;   :ensure t
-;;   :hook
-;;   (vertico-mode . (lambda () (vertico-posframe-mode 1)))
-;;   :custom
-;;   (vertico-posframe-poshandler #'posframe-poshandler-point-frame-center))
 #+end_src
 
 *** savehist
@@ -431,17 +424,6 @@ A port of vim easymotion. Buffer movement using character hints
   (evilem-default-keybindings "SPC"))
 #+end_src
 
-**** Evil Colemak Basics
-For using the Colemak-DH layout with Evil bindings.
-#+begin_src emacs-lisp
-(use-package evil-colemak-basics
-  :ensure t
-  :after (evil evil-snipe evil-collection)
-  :custom
-  (evil-colemak-basics-layout-mod 'mod-dh)
-  (evil-colemak-basics-char-jump-commands 'evil-snipe)
-  :commands global-evil-colemak-basics-mode)
-#+end_src
 
 **** Evil Collection
 A collection of Evil bindings, for the parts of Emacs that Evil does not cover properly by default
@@ -868,13 +850,6 @@ Automatic resizing of windows to the golden ratio
   (golden-ratio-auto-scale t))
 #+end_src
 
-*** devdocs
-Developer documentation in Emacs
-#+begin_src emacs-lisp
-(use-package devdocs
-  :ensure t
-  :bind ("C-h D" . devdocs-lookup))
-#+end_src
 
 ** Appearance
 *** Font
@@ -1046,13 +1021,6 @@ Language Server Protocol integration
   :mode "\\.toml\\'")
 #+end_src
 
-*** Jenkins
-#+begin_src emacs-lisp
-(use-package jenkinsfile-mode
-  :ensure t
-  :mode ("\\Jenkinsfile\\'" "\\.pipeline\\'"))
-#+end_src
-
 *** Markdown
 #+begin_src emacs-lisp
 (use-package markdown-mode
@@ -1072,13 +1040,6 @@ Language Server Protocol integration
 (use-package just-mode :ensure t)
 #+end_src
 
-*** Swift
-No tree-sitter grammar available conveniently at the moment.
-Perhaps I'll try and package [[https://github.com/alex-pinkus/tree-sitter-swift/tree/main][this one]] at some point, but for now, let's just rely on regular swift-mode.
-#+begin_src emacs-lisp
-(use-package swift-mode
-  :ensure t)
-#+end_src
 
 ** Custom functions
 Useful functions gathered that don’t justify an entire package.

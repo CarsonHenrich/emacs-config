@@ -73,12 +73,6 @@
       repo = "dash.el";
       type = "github";
     };
-    devdocs = {
-      flake = false;
-      owner = "astoff";
-      repo = "devdocs.el";
-      type = "github";
-    };
     doom-themes = {
       flake = false;
       owner = "doomemacs";
@@ -113,12 +107,6 @@
       flake = false;
       owner = "emacs-evil";
       repo = "evil";
-      type = "github";
-    };
-    evil-colemak-basics = {
-      flake = false;
-      owner = "wbolster";
-      repo = "emacs-evil-colemak-basics";
       type = "github";
     };
     evil-collection = {
@@ -211,12 +199,6 @@
       repo = "golden-ratio.el";
       type = "github";
     };
-    groovy-mode = {
-      flake = false;
-      owner = "Groovy-Emacs-Modes";
-      repo = "groovy-emacs-modes";
-      type = "github";
-    };
     hcl-mode = {
       flake = false;
       owner = "hcl-emacs";
@@ -253,12 +235,6 @@
       repo = "inheritenv";
       type = "github";
     };
-    jenkinsfile-mode = {
-      flake = false;
-      owner = "john2x";
-      repo = "jenkinsfile-mode";
-      type = "github";
-    };
     just-mode = {
       flake = false;
       owner = "leon-barrett";
@@ -293,12 +269,6 @@
       flake = false;
       owner = "jrblevin";
       repo = "markdown-mode";
-      type = "github";
-    };
-    mathjax = {
-      flake = false;
-      owner = "astoff";
-      repo = "mathjax.el";
       type = "github";
     };
     mood-line = {
@@ -397,12 +367,6 @@
       repo = "spacious-padding";
       type = "github";
     };
-    swift-mode = {
-      flake = false;
-      owner = "swift-emacs";
-      repo = "swift-mode";
-      type = "github";
-    };
     terraform-mode = {
       flake = false;
       owner = "hcl-emacs";
@@ -482,5 +446,5 @@
       type = "github";
     };
   };
-  outputs = {...}: {};
+  outputs = { ... }: { };
 }

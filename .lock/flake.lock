@@ -192,22 +192,6 @@
         "type": "github"
       }
     },
-    "devdocs": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1731505297,
-        "narHash": "sha256-V3Cv8qM1M1AZ9qOz0rtbQt+T/GJHhJRPlfjWVRYX7GE=",
-        "owner": "astoff",
-        "repo": "devdocs.el",
-        "rev": "d2214d34cdeb4483a594dd6973fcd095cef4653f",
-        "type": "github"
-      },
-      "original": {
-        "owner": "astoff",
-        "repo": "devdocs.el",
-        "type": "github"
-      }
-    },
     "doom-themes": {
       "flake": false,
       "locked": {
@@ -301,22 +285,6 @@
       "original": {
         "owner": "emacs-evil",
         "repo": "evil",
-        "type": "github"
-      }
-    },
-    "evil-colemak-basics": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1728058392,
-        "narHash": "sha256-Q2KuTLPIOMKTazQBIdj/HfXpxFcQ223Ib3jHw9IQLfA=",
-        "owner": "wbolster",
-        "repo": "emacs-evil-colemak-basics",
-        "rev": "9465c8da35fe7dd0f66184e671e357ec91faa3fe",
-        "type": "github"
-      },
-      "original": {
-        "owner": "wbolster",
-        "repo": "emacs-evil-colemak-basics",
         "type": "github"
       }
     },
@@ -560,22 +528,6 @@
         "type": "github"
       }
     },
-    "groovy-mode": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1679117628,
-        "narHash": "sha256-Da1X8DzSz10Rr1NUpe1ZK5N/GLmTCf2P6/IOtiCZIAU=",
-        "owner": "Groovy-Emacs-Modes",
-        "repo": "groovy-emacs-modes",
-        "rev": "7b8520b2e2d3ab1d62b35c426e17ac25ed0120bb",
-        "type": "github"
-      },
-      "original": {
-        "owner": "Groovy-Emacs-Modes",
-        "repo": "groovy-emacs-modes",
-        "type": "github"
-      }
-    },
     "hcl-mode": {
       "flake": false,
       "locked": {
@@ -672,22 +624,6 @@
         "type": "github"
       }
     },
-    "jenkinsfile-mode": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1685045178,
-        "narHash": "sha256-bUWt+FTNECzYh0siqdw8TsYktRvqYpE30a2YiqGC8MI=",
-        "owner": "john2x",
-        "repo": "jenkinsfile-mode",
-        "rev": "568865ee419e0592de0dd0717d6769a66d9df111",
-        "type": "github"
-      },
-      "original": {
-        "owner": "john2x",
-        "repo": "jenkinsfile-mode",
-        "type": "github"
-      }
-    },
     "just-mode": {
       "flake": false,
       "locked": {
@@ -781,22 +717,6 @@
       "original": {
         "owner": "jrblevin",
         "repo": "markdown-mode",
-        "type": "github"
-      }
-    },
-    "mathjax": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1731487181,
-        "narHash": "sha256-McyqJadcSzUd98moe2Y4tXcMsSjx4YAos2MtyEVd58E=",
-        "owner": "astoff",
-        "repo": "mathjax.el",
-        "rev": "db669451bbee7d2ea9872c28661c4679391b9644",
-        "type": "github"
-      },
-      "original": {
-        "owner": "astoff",
-        "repo": "mathjax.el",
         "type": "github"
       }
     },
@@ -1038,14 +958,12 @@
         "consult": "consult",
         "corfu": "corfu",
         "dash": "dash",
-        "devdocs": "devdocs",
         "doom-themes": "doom-themes",
         "emacsql": "emacsql",
         "embark": "embark",
         "embark-consult": "embark-consult",
         "envrc": "envrc",
         "evil": "evil",
-        "evil-colemak-basics": "evil-colemak-basics",
         "evil-collection": "evil-collection",
         "evil-commentary": "evil-commentary",
         "evil-easymotion": "evil-easymotion",
@@ -1061,21 +979,18 @@
         "ghub": "ghub",
         "git-link": "git-link",
         "golden-ratio": "golden-ratio",
-        "groovy-mode": "groovy-mode",
         "hcl-mode": "hcl-mode",
         "hl-todo": "hl-todo",
         "ht": "ht",
         "hydra": "hydra",
         "iedit": "iedit",
         "inheritenv": "inheritenv",
-        "jenkinsfile-mode": "jenkinsfile-mode",
         "just-mode": "just-mode",
         "lv": "lv",
         "magit": "magit",
         "magit-section": "magit-section",
         "marginalia": "marginalia",
         "markdown-mode": "markdown-mode",
-        "mathjax": "mathjax",
         "mood-line": "mood-line",
         "multi-vterm": "multi-vterm",
         "nix-mode": "nix-mode",
@@ -1092,7 +1007,6 @@
         "projectile": "projectile",
         "s": "s",
         "spacious-padding": "spacious-padding",
-        "swift-mode": "swift-mode",
         "terraform-mode": "terraform-mode",
         "transient": "transient",
         "treemacs": "treemacs",
@@ -1137,22 +1051,6 @@
       "original": {
         "owner": "protesilaos",
         "repo": "spacious-padding",
-        "type": "github"
-      }
-    },
-    "swift-mode": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1726893863,
-        "narHash": "sha256-BpIAlQcnLDB0HsB7aygy2Qta9GMf8N1wIabKV9hA15w=",
-        "owner": "swift-emacs",
-        "repo": "swift-mode",
-        "rev": "ab189d6e89ac4c0f776d691a41ddeaf9730260d1",
-        "type": "github"
-      },
-      "original": {
-        "owner": "swift-emacs",
-        "repo": "swift-mode",
         "type": "github"
       }
     },

@@ -15,10 +15,6 @@
     buildInputs = o.buildInputs ++ [git python3];
   });
 
-  mathjax = prev.mathjax.overrideAttrs (o: {
-    buildInputs = o.buildInputs ++ [nodejs_23];
-  });
-
   vterm = prev.vterm.overrideAttrs (o: {
     nativeBuildInputs = [cmake gcc];
     buildInputs = o.buildInputs ++ [libvterm-neovim];

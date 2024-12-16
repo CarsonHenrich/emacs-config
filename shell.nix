@@ -5,6 +5,7 @@ with pkgs; {
     packages = with pkgs; [
       nix
       git
+      nix-tree
       cachix
       just
     ];
