@@ -33,7 +33,6 @@ in
   # Config Reference: https://github.com/siderolabs/conform?tab=readme-ov-file
   conform = mkNixago cfg.conform {
     data.commit.conventional.scopes = dmerge.append [
-      # TODO(Initial Commit) CONFIGURE ME 
     ];
   };
 
@@ -49,7 +48,7 @@ in
       inherit (import (inputs.self + /flake.nix)) description;
       homepage = "";
       topics = "emacs, nix, emacs-twist, nix-flakes";
-      private = true;
+      private = false;
     };
   };
 

@@ -78,5 +78,5 @@ repository:
   has_wiki: false
   homepage: ''
   name: emacs-config
-  private: true
+  private: false
   topics: emacs, nix, emacs-twist, nix-flakes
