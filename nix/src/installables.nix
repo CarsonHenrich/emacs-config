@@ -56,7 +56,7 @@ in
 
     inputOverrides = import ./input-overrides.nix;
     registries = import ./registries.nix { inherit inputs; emacsSrc = emacs.src; };
-    initFiles = [ earlyInitEl initEl ];
+    initFiles = [ initEl ];
     exportManifest = true;
     configurationRevision =
       with builtins;
